@@ -14,8 +14,8 @@ import Employees from "./admin/Employees";
 
 import { Outlet } from "react-router-dom";
 import Dashboard from "./admin/Dashboard";
-import Appointment from "./pages/Appointment";
 import Services from "./pages/Services";
+import AppointmentForm from "./Features/appointments/AppointmentForm";
 
 
 const AdminLayout = () => {
@@ -44,9 +44,10 @@ function App() {
           <Route path="/login" element={<Login /> } />
           <Route path="/signup" element={<Signup />} />
           <Route path="/profile" element={ <Profile />} />
-          <Route path="/appointment" element={<Appointment />} />
+          
           <Route path="/services"element={<Services />} />
-
+          
+          <Route path="/appointmentForm" element={<AppointmentForm />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="userlist" element={<Employees />} />
             <Route path="dashboard" element={<Dashboard />} />
