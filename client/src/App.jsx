@@ -48,6 +48,7 @@ function App() {
           <Route path="/services"element={<Services />} />
           
           <Route path="/appointmentForm" element={<AppointmentForm />} />
+          <Route path="/appointmentDetails" element={<AppointmentDetails />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="userlist" element={<Employees />} />
             <Route path="dashboard" element={<Dashboard />} />
