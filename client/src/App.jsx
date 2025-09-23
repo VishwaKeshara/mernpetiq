@@ -15,6 +15,7 @@ import Employees from "./admin/Employees";
 import { Outlet } from "react-router-dom";
 import Dashboard from "./admin/Dashboard";
 import Services from "./pages/Services";
+import AppointmentDetails from "./Features/appointments/AppointmentDetails";
 import AppointmentForm from "./Features/appointments/AppointmentForm";
 
 
