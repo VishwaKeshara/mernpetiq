@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { appointmentBaseURL } from "../../axiosinstance";
 import { MdDelete } from "react-icons/md";
-import { FaPen } from "react-icons/fa";
+import { FaPen, FaSearch } from "react-icons/fa";
+import { IoClose } from "react-icons/io5";
 import { useNavigate, useLocation } from "react-router-dom";
 
 function AppointmentList() {
   const [appointmentList, setAppointmentList] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -51,6 +53,22 @@ function AppointmentList() {
     navigate(`/appointmentAdd`, { state: appointment });
   };
 
+  const filteredAppointments = appointmentList?.filter((appointment) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+    const fieldsToSearch = [
+      appointment?.ownerName,
+      appointment?.petName,
+      appointment?.petType,
+      appointment?.service,
+      appointment?.vet,
+      appointment?.date,
+      toAmPm(appointment?.time),
+      String(appointment?.price),
+    ];
+    return fieldsToSearch.some((value) => String(value || "").toLowerCase().includes(query));
+  });
+
 
   return (
     <motion.div
@@ -78,6 +96,32 @@ function AppointmentList() {
         </motion.button>
       </div>
 
+      <div className="mb-4 flex justify-end">
+        <div className="relative w-full md:w-96">
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+            <FaSearch size={16} />
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search appointments (owner, pet, service, vet, date)"
+            aria-label="Search appointments"
+            className="w-full pl-10 pr-10 py-2 rounded-full border border-gray-200 bg-white shadow-sm placeholder:text-gray-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute inset-y-0 right-2 my-auto inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              aria-label="Clear search"
+            >
+              <IoClose size={18} />
+            </button>
+          )}
+        </div>
+      </div>
+
       <motion.div className="bg-white shadow rounded-lg overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -103,12 +147,12 @@ function AppointmentList() {
                 show: { opacity: 1, transition: { staggerChildren: 0.05 } },
               }}
             >
-              {appointmentList?.length === 0 && (
+              {(filteredAppointments?.length === 0) && (
                 <tr>
                   <td colSpan={9} className="px-4 py-10 text-center text-gray-500">No appointments found</td>
                 </tr>
               )}
-              {appointmentList?.map((appointment, index) => (
+              {filteredAppointments?.map((appointment, index) => (
                 <motion.tr
                   key={index}
                   className="hover:bg-amber-50"
