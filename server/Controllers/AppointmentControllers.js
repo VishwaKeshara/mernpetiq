@@ -18,7 +18,7 @@ const handleAppointmentController = async (req, res) => {
             return res
                 .status(201)
                 .json({ 
-                    message: "Data created successfully", 
+                    message: "Appointment Submited successfully", 
                     success: true, 
                     id: appointmentAdd._id 
                 });
