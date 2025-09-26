@@ -3,11 +3,23 @@ import { motion } from "framer-motion";
 import { appointmentBaseURL } from "../../axiosinstance";
 import { MdDelete } from "react-icons/md";
 import { FaPen } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 function AppointmentList() {
   const [appointmentList, setAppointmentList] = useState([]);
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Check if accessed from admin panel
+  const isAdminView = location.pathname.includes('/admin/');
+
+  const toAmPm = (time24) => {
+    if (!time24) return "";
+    const [h, m] = time24.split(":").map(Number);
+    const period = h >= 12 ? "PM" : "AM";
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+    return `${hour12.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")} ${period}`;
+  };
 
   const getAllAppointmentList = async () => {
     try {
@@ -39,6 +51,7 @@ function AppointmentList() {
     navigate(`/appointmentAdd`, { state: appointment });
   };
 
+
   return (
     <motion.div
       className="w-full px-5 py-6"
@@ -53,10 +66,10 @@ function AppointmentList() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
         >
-          Appointments
+          Appointments Details
         </motion.h2>
         <motion.button
-          onClick={() => navigate("/appointmentAdd")}
+          onClick={() => navigate("/services")}
           className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md shadow"
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.98 }}
@@ -108,7 +121,7 @@ function AppointmentList() {
                   <td className="px-4 py-3 text-gray-800">{appointment.price}</td>
                   <td className="px-4 py-3 text-gray-800">{appointment.vet}</td>
                   <td className="px-4 py-3 text-gray-800">{appointment.date}</td>
-                  <td className="px-4 py-3 text-gray-800">{appointment.time}</td>
+                  <td className="px-4 py-3 text-gray-800">{toAmPm(appointment.time)}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2 justify-center">
                       <motion.button
