@@ -16,6 +16,7 @@ import { Outlet } from "react-router-dom";
 import Dashboard from "./admin/Dashboard";
 import Appointment from "./pages/Appointment";
 import Services from "./pages/Services";
+import { ProductList, ProductAdd, ProductDashboard } from "./Features/petProduct";
 
 
 const AdminLayout = () => {
@@ -50,6 +51,9 @@ function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="userlist" element={<Employees />} />
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="products" element={<ProductDashboard />} />
+            <Route path="products/list" element={<ProductList />} />
+            <Route path="products/add" element={<ProductAdd />} />
           </Route>
 
         </Routes>
