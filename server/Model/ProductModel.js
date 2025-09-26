@@ -11,10 +11,28 @@ const productSchema = new mongoose.Schema({
         required: true
     },
 
+    description: {
+        type: String,
+        required: true
+    },
+
+    category: {
+        type: String,
+        required: false,
+        default: "Other"
+    },
+
+    stock: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+
     image: {
         type: String,
         required: true
     },
+
 }, {
     timestamps: true // createdAt, updatedAt
 });

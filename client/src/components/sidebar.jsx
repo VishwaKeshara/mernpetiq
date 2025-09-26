@@ -14,6 +14,7 @@ import {
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 
+// Sidebar links configuration
 const links = [
   { name: "Dashboard", icon: <FaHome />, path: "/admin/Dashboard" },
   { name: "Employees", icon: <FaUsers />, path: "/admin/UserList" },
