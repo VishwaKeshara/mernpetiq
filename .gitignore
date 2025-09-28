@@ -1,23 +1,74 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
-/node_modules
-/.pnp
-.pnp.js
+# Coverage
+coverage
+*.lcov
+/.coverage
 
-
-/coverage
-
-
+# Build directories
 /build
+/dist
+/out
 
+# Dependency directories
+node_modules/
+/jspm_packages/
+/bower_components
+client/node_modules/
+server/node_modules/
 
+# Cache
+.nyc_output
+.cache
+.parcel-cache
+.svelte-kit/
+.temp
+.docusaurus
+.vitepress
+
+# VSCode test folders
+.vscode-test
+
+# Misc
 .DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env files
+.env
+.env.*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+!.env.example
 
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Yarn
+.pnp
+.pnp.js
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Logs
+server/logs/
