@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FaPaw, FaStethoscope, FaCalendarCheck, FaClipboardList, FaShoppingCart, FaArrowRight, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { productBaseURL } from "../axiosinstance";
+import { useNavigate } from "react-router-dom";
 
 
 function Home() {
+  const navigate = useNavigate();
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -290,6 +292,7 @@ function Home() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate("/products")}
                   className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition-all duration-300 flex items-center gap-2 mx-auto"
                 >
                   View All Products

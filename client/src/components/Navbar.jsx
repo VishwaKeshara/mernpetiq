@@ -10,7 +10,8 @@ import {
   FaSignOutAlt, 
   FaInfoCircle, 
   FaCut, 
-  FaConciergeBell 
+  FaConciergeBell,
+  FaShoppingBag 
 } from "react-icons/fa";
 
 function Navbar() {
@@ -76,8 +77,8 @@ function Navbar() {
           whileHover={{ scale: 1.05, color: "#FFD700" }}
           whileTap={{ scale: 0.95 }}
         >
-          <FaConciergeBell />
-          <Link to="/petProduct">Pet Products</Link>
+          <FaShoppingBag />
+          <Link to="/products">Pet Products</Link>
         </motion.div>
 
         <motion.div
