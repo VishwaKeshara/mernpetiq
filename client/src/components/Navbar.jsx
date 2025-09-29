@@ -3,6 +3,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { motion } from "framer-motion";
+import CartIcon from "./CartIcon";
 import { 
   FaPaw,  
   FaSignInAlt, 
@@ -89,6 +90,11 @@ function Navbar() {
         >
           <FaCut />
           <Link to="/services">Services</Link>
+        </motion.div>
+
+        {/* Cart Icon */}
+        <motion.div variants={itemVariants}>
+          <CartIcon />
         </motion.div>
 
        

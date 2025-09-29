@@ -3,10 +3,12 @@ import { motion } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaShoppingCart, FaArrowLeft, FaTag, FaWarehouse, FaCalendar } from "react-icons/fa";
 import { productBaseURL } from "../axiosinstance";
+import { useCart } from "../context/CartContext";
 
 function ProductProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { addToCart, toggleCart } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -40,6 +42,13 @@ function ProductProfile() {
 
   const handleQuantityChange = (change) => {
     setQuantity(prev => Math.max(1, Math.min(product.stock, prev + change)));
+  };
+
+  const handleAddToCart = () => {
+    if (product && quantity > 0) {
+      addToCart(product, quantity);
+      toggleCart(); // Open cart to show the added item
+    }
   };
 
   if (loading) {
@@ -191,6 +200,7 @@ function ProductProfile() {
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
+                    onClick={handleAddToCart}
                     className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-6 py-4 rounded-xl font-bold text-lg shadow-lg transition-all duration-200 flex items-center justify-center gap-3"
                   >
                     <FaShoppingCart size={20} />
