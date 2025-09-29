@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { FaShoppingCart, FaFilter, FaSearch, FaTh, FaList } from "react-icons/fa";
 import { productBaseURL } from "../axiosinstance";
 
 function AllProducts() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,11 @@ function AllProducts() {
     };
 
     fetchProducts();
+  }, []);
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
   }, []);
 
   // Get unique categories
@@ -176,7 +183,8 @@ function AllProducts() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 group"
+                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 group h-[420px] flex flex-col cursor-pointer"
+                onClick={() => navigate(`/product/${product._id}`)}
               >
                 <div className="relative overflow-hidden h-48 p-3">
                   <img
@@ -197,45 +205,51 @@ function AllProducts() {
                   )}
                 </div>
 
-                <div className="p-4">
+                <div className="p-4 flex flex-col flex-grow">
                   <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-yellow-700 transition-colors leading-tight">
                     {product.name}
                   </h3>
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-3 flex-grow">
                     {product.description}
                   </p>
 
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                      product.stock > 10 
-                        ? 'bg-green-100 text-green-800' 
-                        : product.stock > 0 
-                        ? 'bg-yellow-100 text-yellow-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
-                    </span>
-                    
-                    {product.category && (
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                        {product.category}
+                  <div className="mt-auto space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                        product.stock > 10 
+                          ? 'bg-green-100 text-green-800' 
+                          : product.stock > 0 
+                          ? 'bg-yellow-100 text-yellow-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
                       </span>
-                    )}
-                  </div>
+                      
+                      {product.category && (
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                          {product.category}
+                        </span>
+                      )}
+                    </div>
 
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    disabled={product.stock === 0}
-                    className={`w-full px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-                      product.stock === 0
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-md'
-                    }`}
-                  >
-                    <FaShoppingCart size={14} />
-                    {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-                  </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      disabled={product.stock === 0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Add cart logic here
+                      }}
+                      className={`w-full px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                        product.stock === 0
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-md'
+                      }`}
+                    >
+                      <FaShoppingCart size={14} />
+                      {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                    </motion.button>
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -249,7 +263,8 @@ function AllProducts() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300"
+                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+                onClick={() => navigate(`/product/${product._id}`)}
               >
                 <div className="flex items-center gap-6">
                   <div className="relative w-24 h-24 flex-shrink-0">
@@ -293,6 +308,10 @@ function AllProducts() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       disabled={product.stock === 0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Add cart logic here
+                      }}
                       className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 ${
                         product.stock === 0
                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
