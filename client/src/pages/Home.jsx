@@ -178,7 +178,8 @@ function Home() {
                               initial={{ opacity: 0, scale: 0.9 }}
                               animate={{ opacity: 1, scale: 1 }}
                               transition={{ duration: 0.5, delay: productIndex * 0.1 }}
-                              className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 group h-[350px] flex flex-col"
+                              className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 group h-[350px] flex flex-col cursor-pointer"
+                              onClick={() => navigate(`/product/${product._id}`)}
                             >
                               <div className="relative overflow-hidden h-40 p-3">
                                 <img
@@ -226,6 +227,10 @@ function Home() {
                                   <motion.button
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // Add cart logic here
+                                    }}
                                     className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-3 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm text-sm"
                                   >
                                     <FaShoppingCart size={12} />

@@ -17,6 +17,7 @@ import Dashboard from "./admin/Dashboard";
 import Appointment from "./pages/Appointment";
 import Services from "./pages/Services";
 import AllProducts from "./pages/AllProducts";
+import ProductProfile from "./pages/ProductProfile";
 import { ProductList, ProductAdd, ProductDashboard } from "./Features/petProduct";
 
 
@@ -49,6 +50,7 @@ function App() {
           <Route path="/appointment" element={<Appointment />} />
           <Route path="/services"element={<Services />} />
           <Route path="/products" element={<AllProducts />} />
+          <Route path="/product/:id" element={<ProductProfile />} />
 
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="userlist" element={<Employees />} />
