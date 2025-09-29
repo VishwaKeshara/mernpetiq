@@ -3,9 +3,11 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { FaShoppingCart, FaFilter, FaSearch, FaTh, FaList } from "react-icons/fa";
 import { productBaseURL } from "../axiosinstance";
+import { useCart } from "../context/CartContext";
 
 function AllProducts() {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +71,12 @@ function AllProducts() {
 
     setFilteredProducts(filtered);
   }, [products, searchTerm, selectedCategory, sortBy]);
+
+  const handleAddToCart = (product) => {
+    if (product.stock > 0) {
+      addToCart(product, 1);
+    }
+  };
 
   if (loading) {
     return (
@@ -238,7 +246,7 @@ function AllProducts() {
                       disabled={product.stock === 0}
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Add cart logic here
+                        handleAddToCart(product);
                       }}
                       className={`w-full px-4 py-2 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
                         product.stock === 0
@@ -310,7 +318,7 @@ function AllProducts() {
                       disabled={product.stock === 0}
                       onClick={(e) => {
                         e.stopPropagation();
-                        // Add cart logic here
+                        handleAddToCart(product);
                       }}
                       className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 ${
                         product.stock === 0

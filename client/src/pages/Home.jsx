@@ -3,10 +3,12 @@ import { motion } from "framer-motion";
 import { FaPaw, FaStethoscope, FaCalendarCheck, FaClipboardList, FaShoppingCart, FaArrowRight, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { productBaseURL } from "../axiosinstance";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "../context/CartContext";
 
 
 function Home() {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -47,6 +49,13 @@ function Home() {
   const getCurrentProducts = () => {
     const startIndex = currentSlide * productsPerSlide;
     return featuredProducts.slice(startIndex, startIndex + productsPerSlide);
+  };
+
+  // Handle add to cart
+  const handleAddToCart = (product) => {
+    if (product.stock > 0) {
+      addToCart(product, 1);
+    }
   };
 
   const features = [
@@ -229,7 +238,7 @@ function Home() {
                                     whileTap={{ scale: 0.98 }}
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      // Add cart logic here
+                                      handleAddToCart(product);
                                     }}
                                     className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-3 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm text-sm"
                                   >

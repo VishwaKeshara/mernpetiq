@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
 
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";      
@@ -10,6 +11,7 @@ import Profile from "./pages/profile";
 import Navbar from "./components/navbar";
 import Footer from "./components/Footer";
 import Sidebar from "./components/Sidebar";
+import Cart from "./components/Cart";
 import Employees from "./admin/Employees";
 
 import { Outlet } from "react-router-dom";
@@ -18,6 +20,7 @@ import Appointment from "./pages/Appointment";
 import Services from "./pages/Services";
 import AllProducts from "./pages/AllProducts";
 import ProductProfile from "./pages/ProductProfile";
+import Checkout from "./pages/Checkout";
 import { ProductList, ProductAdd, ProductDashboard } from "./Features/petProduct";
 
 
@@ -38,7 +41,8 @@ function App() {
 
   return (
     <AuthProvider>
-      <Router>
+      <CartProvider>
+        <Router>
       <Navbar />
         <Routes>
           
@@ -51,6 +55,7 @@ function App() {
           <Route path="/services"element={<Services />} />
           <Route path="/products" element={<AllProducts />} />
           <Route path="/product/:id" element={<ProductProfile />} />
+          <Route path="/checkout" element={<Checkout />} />
 
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="userlist" element={<Employees />} />
@@ -62,7 +67,9 @@ function App() {
 
         </Routes>
         <Footer />
+        <Cart />
       </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }
