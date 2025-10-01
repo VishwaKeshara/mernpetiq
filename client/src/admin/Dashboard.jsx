@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   FaPaw,
   FaCalendarAlt,
@@ -75,6 +76,8 @@ const cardVariants = {
 };
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+
   return (
     <div className="p-6 md:p-8 space-y-8 bg-amber-50 min-h-screen">
  
@@ -84,6 +87,7 @@ export default function Dashboard() {
           <p className="text-gray-600">Here’s what’s happening at your clinic today.</p>
         </div>
         <motion.button
+          onClick={() => navigate("/services")}
           whileTap={{ scale: 0.98 }}
           whileHover={{ scale: 1.02 }}
           className="px-4 py-2 rounded-2xl bg-amber-500 text-white shadow hover:shadow-md"

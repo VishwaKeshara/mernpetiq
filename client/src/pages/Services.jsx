@@ -70,8 +70,8 @@ function Services() {
               <p className="text-yellow-700 font-bold mb-4">
                 LKR {service.price.toLocaleString()} / hour
               </p>
-              {/* Pass service name as query param */}
-              <Link to={`/appointment?service=${encodeURIComponent(service.title)}`}>
+              {/* Pass service name and price as query params */}
+              <Link to={`/appointmentAdd?service=${encodeURIComponent(service.title)}&price=${encodeURIComponent(service.price)}`}>
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}

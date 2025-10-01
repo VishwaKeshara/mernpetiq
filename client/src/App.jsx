@@ -14,11 +14,12 @@ import Employees from "./admin/Employees";
 
 import { Outlet } from "react-router-dom";
 import Dashboard from "./admin/Dashboard";
-import Appointment from "./pages/Appointment";
 import Services from "./pages/Services";
 import AllProducts from "./pages/AllProducts";
 import ProductProfile from "./pages/ProductProfile";
 import { ProductList, ProductAdd, ProductDashboard } from "./Features/petProduct";
+import AppointmentList from "./Features/appointments/AppointmentList";
+import AppointmentAdd from "./Features/appointments/AppointmentAdd";
 
 
 const AdminLayout = () => {
@@ -47,17 +48,20 @@ function App() {
           <Route path="/login" element={<Login /> } />
           <Route path="/signup" element={<Signup />} />
           <Route path="/profile" element={ <Profile />} />
-          <Route path="/appointment" element={<Appointment />} />
+          
           <Route path="/services"element={<Services />} />
           <Route path="/products" element={<AllProducts />} />
           <Route path="/product/:id" element={<ProductProfile />} />
-
+          
+          <Route path="/appointmentAdd" element={<AppointmentAdd />} />
+          <Route path="/appointmentList" element={<AppointmentList />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="userlist" element={<Employees />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="products" element={<ProductDashboard />} />
             <Route path="products/list" element={<ProductList />} />
             <Route path="products/add" element={<ProductAdd />} />
+            <Route path="appointments" element={<AppointmentList />} />
           </Route>
 
         </Routes>
