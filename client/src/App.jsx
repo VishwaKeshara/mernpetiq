@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { CartProvider } from "./context/CartContext";
 
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";      
@@ -10,14 +11,12 @@ import Profile from "./pages/profile";
 import Navbar from "./components/navbar";
 import Footer from "./components/Footer";
 import Sidebar from "./components/Sidebar";
+import Cart from "./components/Cart";
 import Employees from "./admin/Employees";
 
 import { Outlet } from "react-router-dom";
 import Dashboard from "./admin/Dashboard";
 import Services from "./pages/Services";
-import AllProducts from "./pages/AllProducts";
-import ProductProfile from "./pages/ProductProfile";
-import { ProductList, ProductAdd, ProductDashboard } from "./Features/petProduct";
 import AppointmentList from "./Features/appointments/AppointmentList";
 import AppointmentAdd from "./Features/appointments/AppointmentAdd";
 
@@ -39,7 +38,8 @@ function App() {
 
   return (
     <AuthProvider>
-      <Router>
+      <CartProvider>
+        <Router>
       <Navbar />
         <Routes>
           
@@ -50,23 +50,20 @@ function App() {
           <Route path="/profile" element={ <Profile />} />
           
           <Route path="/services"element={<Services />} />
-          <Route path="/products" element={<AllProducts />} />
-          <Route path="/product/:id" element={<ProductProfile />} />
           
           <Route path="/appointmentAdd" element={<AppointmentAdd />} />
           <Route path="/appointmentList" element={<AppointmentList />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="userlist" element={<Employees />} />
             <Route path="dashboard" element={<Dashboard />} />
-            <Route path="products" element={<ProductDashboard />} />
-            <Route path="products/list" element={<ProductList />} />
-            <Route path="products/add" element={<ProductAdd />} />
             <Route path="appointments" element={<AppointmentList />} />
           </Route>
 
         </Routes>
         <Footer />
+        <Cart />
       </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }
