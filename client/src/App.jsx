@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
+
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { SidebarProvider, useSidebar } from "./context/SidebarContext";
@@ -9,7 +10,7 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Profile from "./pages/profile";
 
-import Navbar from "./components/navbar";
+import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Sidebar from "./components/Sidebar";
 import Cart from "./components/Cart";
@@ -24,12 +25,11 @@ import Checkout from "./pages/Checkout";
 import { ProductList, ProductAdd, ProductDashboard } from "./Features/petProduct";
 import AppointmentList from "./Features/appointments/AppointmentList";
 import AppointmentAdd from "./Features/appointments/AppointmentAdd";
-import Layout from "./Layout";
-import PaymentPage from "./PaymentPage";
-import DeliveryPage from "./pages/DeliveryPage";
-import AdminPayments from "./AdminPayments";
-import AdminCards from "./AdminCards";
-import AdminAddresses from "./AdminAddresses";
+import PaymentPage from "./Features/Payment/PaymentPage";
+import DeliveryPage from "./Features/Delivery/DeliveryPage";
+import AdminPayments from "./Features/Payment/AdminPayments";
+import AdminCards from "./Features/Payment/AdminCards";
+import AdminAddresses from "./Features/Delivery/AdminAddresses";
 
 
 
@@ -80,10 +80,11 @@ function App() {
           <Route path="/products" element={<AllProducts />} />
           <Route path="/product/:id" element={<ProductProfile />} />
           <Route path="/checkout" element={<Checkout />} />
-          <Route element={<Layout />}>
-          <Route path="/payment" element={<PaymentPage />} />
+
+
+           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/delivery" element={<DeliveryPage />} />
-          </Route>
+          
 
 
 
@@ -104,7 +105,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
 
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          
 
 
           <Route path="/appointmentAdd" element={<AppointmentAdd />} />
