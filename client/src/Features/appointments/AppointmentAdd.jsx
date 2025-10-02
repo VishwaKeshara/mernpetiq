@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { appointmentBaseURL } from "../../axiosinstance";
+import { appointmentBaseURL } from "../../axiosinstance.js";
 
 function AppointmentAdd() {
   const location = useLocation();

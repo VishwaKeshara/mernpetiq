@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { productBaseURL } from "../../axiosinstance";
+import { productBaseURL } from "../../axiosinstance.js";
 import { MdDelete } from "react-icons/md";
 import { FaPen, FaSearch, FaBoxOpen, FaPlus, FaTachometerAlt, FaDownload } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
@@ -236,15 +236,6 @@ function ProductList() {
             Download PDF
           </motion.button>
           <motion.button
-            onClick={() => navigate("/admin/products/add")}
-            className="flex-1 md:flex-none bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <FaPlus className="text-lg" />
-            Add Product
-          </motion.button>
-          <motion.button
             onClick={() => navigate("/admin/products")}
             className="flex-1 md:flex-none bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
             whileHover={{ scale: 1.05, y: -2 }}
@@ -252,6 +243,15 @@ function ProductList() {
           >
             <FaTachometerAlt className="text-lg" />
             Dashboard
+          </motion.button>
+          <motion.button
+            onClick={() => navigate("/admin/products/add")}
+            className="flex-1 md:flex-none bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <FaPlus className="text-lg" />
+            Add Product
           </motion.button>
         </div>
       </motion.div>

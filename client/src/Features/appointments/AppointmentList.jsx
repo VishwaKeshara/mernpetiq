@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { appointmentBaseURL } from "../../axiosinstance";
+import { appointmentBaseURL } from "../../axiosinstance.js";
 import { MdDelete } from "react-icons/md";
 import { FaPen, FaSearch } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";

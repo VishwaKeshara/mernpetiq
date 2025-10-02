@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { FaBoxOpen, FaPlus, FaDollarSign, FaWarehouse } from "react-icons/fa";
-import { productBaseURL } from "../../axiosinstance";
+import { productBaseURL } from "../../axiosinstance.js";
 
 function ProductDashboard() {
   const navigate = useNavigate();
