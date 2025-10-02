@@ -42,7 +42,7 @@ function Footer() {
 
       <div className="bg-yellow-600 text-center py-4">
         <p className="text-yellow-100 text-sm">
-          &copy; {new Date().getFullYear()} PetCare. All rights reserved.
+          &copy; {new Date().getFullYear()} PetIQ.lk All rights reserved.
         </p>
       </div>
     </footer>
