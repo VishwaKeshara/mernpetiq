@@ -25,8 +25,15 @@ function AppointmentList() {
 
   const getAllAppointmentList = async () => {
     try {
-      const { data } = await appointmentBaseURL.get("/appointmentList");
-      setAppointmentList(data?.appointmentList);
+      // Prefer RESTful route, fall back to compatibility
+      let data;
+      try {
+        ({ data } = await appointmentBaseURL.get("/"));
+      } catch (_) {
+        ({ data } = await appointmentBaseURL.get("/appointmentList"));
+      }
+      const items = data?.appointmentList ?? data?.appointments ?? [];
+      setAppointmentList(items);
     } catch (error) {
       console.log(error);
     }

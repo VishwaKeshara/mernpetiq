@@ -41,7 +41,7 @@ function Navbar() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
       >
-        <FaPaw /> <Link to="/home">PetIQ.LK</Link>
+        <FaPaw /> <Link to="/home">PetIQ</Link>
       </motion.div>
 
    
@@ -68,16 +68,6 @@ function Navbar() {
           whileHover={{ scale: 1.05, color: "#FFD700" }}
           whileTap={{ scale: 0.95 }}
         >
-          <FaInfoCircle />
-          <Link to="/about">About</Link>
-        </motion.div>
-
-        <motion.div
-          className="flex items-center gap-1"
-          variants={itemVariants}
-          whileHover={{ scale: 1.05, color: "#FFD700" }}
-          whileTap={{ scale: 0.95 }}
-        >
           <FaShoppingBag />
           <Link to="/products">Pet Products</Link>
         </motion.div>
@@ -90,6 +80,16 @@ function Navbar() {
         >
           <FaCut />
           <Link to="/services">Services</Link>
+        </motion.div>
+
+        <motion.div
+          className="flex items-center gap-1"
+          variants={itemVariants}
+          whileHover={{ scale: 1.05, color: "#FFD700" }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <FaInfoCircle />
+          <Link to="/about">About Us</Link>
         </motion.div>
 
         {/* Cart Icon */}
@@ -138,17 +138,7 @@ function Navbar() {
               whileTap={{ scale: 0.95 }}
             >
               <FaSignInAlt />
-              <Link to="/login">Login</Link>
-            </motion.div>
-
-            <motion.div
-              className="flex items-center gap-2"
-              variants={itemVariants}
-              whileHover={{ scale: 1.1, color: "#FFD700" }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <FaUserPlus />
-              <Link to="/signup">Register</Link>
+              <Link to="/login">Sign In</Link>
             </motion.div>
           </>
         )}

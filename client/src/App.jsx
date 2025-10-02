@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { SidebarProvider, useSidebar } from "./context/SidebarContext";
 
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";      
@@ -26,15 +27,29 @@ import AppointmentAdd from "./Features/appointments/AppointmentAdd";
 
 
 const AdminLayout = () => {
+  const { isOpen } = useSidebar();
+  
   return (
-    <div style={{ display: "flex" }}>
+    <div style={{ minHeight: "100vh" }}>
       <Sidebar />
-      <div style={{ flex: 1, padding: "20px" }}>
-        
+      <div style={{ 
+        marginLeft: isOpen ? "250px" : "60px", 
+        padding: "20px", 
+        backgroundColor: "#f8f9fa",
+        minHeight: "100vh",
+        transition: "margin-left 0.3s ease"
+      }}>
         <Outlet />
       </div>
     </div>
   );
+};
+
+const ConditionalFooter = () => {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  
+  return !isAdminRoute ? <Footer /> : null;
 };
 
 function App() {
@@ -43,9 +58,10 @@ function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <Router>
-      <Navbar />
-        <Routes>
+        <SidebarProvider>
+          <Router>
+            <Navbar />
+            <Routes>
           
           <Route path="/" element={<Home />} />
           <Route path="/home" element={<Home />} />
@@ -71,9 +87,10 @@ function App() {
           <Route path="/appointmentList" element={<AppointmentList />} />
 
         </Routes>
-        <Footer />
+        <ConditionalFooter />
         <Cart />
       </Router>
+        </SidebarProvider>
       </CartProvider>
     </AuthProvider>
   );
