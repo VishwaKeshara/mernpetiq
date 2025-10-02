@@ -7,9 +7,9 @@ function Footer() {
       <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-8">
     
         <div>
-          <h3 className="text-xl font-bold mb-4">PetCare</h3>
+          <h3 className="text-xl font-bold mb-4">PetIQ</h3>
           <p className="text-yellow-100">
-            Complete veterinary management system for pets. Track medical records, appointments, products, and reports all in one place.
+            Complete veterinary management system for pets. Professional care, advanced treatments, and comprehensive pet health solutions all in one place.
           </p>
         </div>
 
@@ -17,17 +17,17 @@ function Footer() {
           <h3 className="text-xl font-bold mb-4">Quick Links</h3>
           <ul className="space-y-2">
             <li className="hover:text-yellow-200 cursor-pointer">Home</li>
-            <li className="hover:text-yellow-200 cursor-pointer">Pets</li>
+            <li className="hover:text-yellow-200 cursor-pointer">Pet Products</li>
+            <li className="hover:text-yellow-200 cursor-pointer">Services</li>
+            <li className="hover:text-yellow-200 cursor-pointer">About Us</li>
             <li className="hover:text-yellow-200 cursor-pointer">Appointments</li>
-            <li className="hover:text-yellow-200 cursor-pointer">Medical Records</li>
-            <li className="hover:text-yellow-200 cursor-pointer">Products</li>
           </ul>
         </div>
 
         <div>
           <h3 className="text-xl font-bold mb-4">Contact Us</h3>
           <p className="flex items-center mb-2">
-            <FaEnvelope className="mr-2" /> info@petcare.com
+            <FaEnvelope className="mr-2" /> info@petiq.com
           </p>
           <p className="flex items-center mb-2">
             <FaPhone className="mr-2" /> +94 77 123 4567
@@ -42,7 +42,7 @@ function Footer() {
 
       <div className="bg-yellow-600 text-center py-4">
         <p className="text-yellow-100 text-sm">
-          &copy; {new Date().getFullYear()} PetCare. All rights reserved.
+          &copy; {new Date().getFullYear()} PetIQ - Veterinary Management System. All rights reserved.
         </p>
       </div>
     </footer>
