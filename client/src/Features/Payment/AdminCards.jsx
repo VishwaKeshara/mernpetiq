@@ -1,7 +1,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:4242";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
+
 
 export default function AdminCards() {
   const [cards, setCards] = useState([]);
