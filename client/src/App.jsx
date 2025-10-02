@@ -22,6 +22,13 @@ import AllProducts from "./pages/AllProducts";
 import ProductProfile from "./pages/ProductProfile";
 import Checkout from "./pages/Checkout";
 import { ProductList, ProductAdd, ProductDashboard } from "./Features/petProduct";
+import Layout from "./Layout";
+import PaymentPage from "./PaymentPage";
+import DeliveryPage from "./pages/DeliveryPage";
+import AdminPayments from "./AdminPayments";
+import AdminCards from "./AdminCards";
+import AdminAddresses from "./AdminAddresses";
+
 
 
 const AdminLayout = () => {
@@ -56,6 +63,11 @@ function App() {
           <Route path="/products" element={<AllProducts />} />
           <Route path="/product/:id" element={<ProductProfile />} />
           <Route path="/checkout" element={<Checkout />} />
+          <Route element={<Layout />}>
+          <Route path="/payment" element={<PaymentPage />} />
+          <Route path="/delivery" element={<DeliveryPage />} />
+          </Route>
+
 
 
 
@@ -70,6 +82,9 @@ function App() {
             <Route path="addresses" element={<AdminAddresses />} />
 
           </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+
 
         </Routes>
         <Footer />
