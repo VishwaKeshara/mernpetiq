@@ -9,3 +9,8 @@ export const productBaseURL = axios.create({
 export const appointmentBaseURL = axios.create({
   baseURL: "http://localhost:5000/api/appointments",
 });
+
+// Medical records API client
+export const medicalRecordBaseURL = axios.create({
+  baseURL: 'http://localhost:5000/api/medical-records'
+});

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
-
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { SidebarProvider, useSidebar } from "./context/SidebarContext";
@@ -31,6 +32,7 @@ import AdminPayments from "./Features/Payment/AdminPayments";
 import AdminCards from "./Features/Payment/AdminCards";
 import AdminAddresses from "./Features/Delivery/AdminAddresses";
 
+import VetDashboard from "./Features/medicalRecords/vetDashboard";
 
 
 const AdminLayout = () => {
@@ -100,6 +102,7 @@ function App() {
             <Route path="addresses" element={<AdminAddresses />} />
 
             <Route path="appointments" element={<AppointmentList />} />
+            <Route path="medical-records" element={<VetDashboard />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -115,6 +118,7 @@ function App() {
         <ConditionalFooter />
         <Cart />
       </Router>
+        <ToastContainer position="top-right" autoClose={3000} />
         </SidebarProvider>
       </CartProvider>
     </AuthProvider>
