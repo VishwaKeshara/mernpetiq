@@ -57,12 +57,18 @@ function App() {
           <Route path="/product/:id" element={<ProductProfile />} />
           <Route path="/checkout" element={<Checkout />} />
 
+
+
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="userlist" element={<Employees />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="products" element={<ProductDashboard />} />
             <Route path="products/list" element={<ProductList />} />
             <Route path="products/add" element={<ProductAdd />} />
+            <Route path="payments" element={<AdminPayments/>}/>
+            <Route path="cards" element={<AdminCards />} />
+            <Route path="addresses" element={<AdminAddresses />} />
+
           </Route>
 
         </Routes>
