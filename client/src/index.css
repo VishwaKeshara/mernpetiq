@@ -1,1 +1,12 @@
 @import "tailwindcss";
+
+/* Admin Layout Styles */
+.admin-content-expanded {
+  margin-left: 250px;
+  transition: margin-left 0.3s ease;
+}
+
+.admin-content-collapsed {
+  margin-left: 60px;
+  transition: margin-left 0.3s ease;
+}
