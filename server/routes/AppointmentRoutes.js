@@ -1,16 +1,19 @@
-const express = require("express");
+import express from "express";
+import {
+	getAllAppointments,
+	addAppointments,
+	getById,
+	updateAppointment,
+	deleteAppointment,
+} from "../Controllers/AppointmentControllers.js";
+
 const router = express.Router();
-//Insert Model
-const Appointment = require("../Model/AppointmentModel");
-//Insert Appointment Controller
-const AppointmentController = require("../Controllers/AppointmentControllers");
 
-//Routes
-router.get("/",AppointmentController.getAllAppointments);
-router.post("/",AppointmentController.addAppointments);
-router.get("/:id",AppointmentController.getById);
-router.put("/:id",AppointmentController.updateAppointment);
-router.delete("/:id",AppointmentController.deleteAppointment);
+// Routes
+router.get("/", getAllAppointments);
+router.post("/", addAppointments);
+router.get("/:id", getById);
+router.put("/:id", updateAppointment);
+router.delete("/:id", deleteAppointment);
 
-
-module.exports = router;
+export default router;

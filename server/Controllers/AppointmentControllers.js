@@ -1,8 +1,6 @@
-// const express = require("express");
-// const router = express.Router();
-const Appointment = require("../Model/AppointmentModel");
+import Appointment from "../Model/AppointmentModel.js";
 
-const getAllAppointments = async (req, res, next) => {
+export const getAllAppointments = async (req, res, next) => {
     let appointments;
     //Get All Appointments
     try {
@@ -19,7 +17,7 @@ const getAllAppointments = async (req, res, next) => {
 };
 
 //Data insert
-    const addAppointments = async (req, res, next) => {
+export const addAppointments = async (req, res, next) => {
     const { ownerName, petName, petType, service, price, vet, date, time } = req.body;
 
     let appointment;    
@@ -46,7 +44,7 @@ const getAllAppointments = async (req, res, next) => {
 };
 
 //Get by ID
-const getById = async (req, res, next) => {
+export const getById = async (req, res, next) => {
 
     const id = req.params.id;
 
@@ -63,7 +61,7 @@ const getById = async (req, res, next) => {
     return res.status(200).json({ appointment });
 };
 //Update Appointment details
-const updateAppointment = async (req, res, next) => {
+export const updateAppointment = async (req, res, next) => {
     const id = req.params.id;
     const { ownerName, petName, petType, service, price, vet, date, time } = req.body;
     let appointment;
@@ -88,7 +86,7 @@ const updateAppointment = async (req, res, next) => {
     return res.status(200).json({ appointment });
 };
 //Delete Appointment details
-const deleteAppointment = async (req, res, next) => {
+export const deleteAppointment = async (req, res, next) => {
     const id = req.params.id;
     let appointment;    
     try {
@@ -102,10 +100,4 @@ const deleteAppointment = async (req, res, next) => {
     }
     return res.status(200).json({ message: "Appointment Successfully Deleted" });
 };
-
-//Export all functions  
-exports.getAllAppointments = getAllAppointments;
-exports.addAppointments = addAppointments;
-exports.getById = getById;
-exports.updateAppointment = updateAppointment;
-exports.deleteAppointment = deleteAppointment;
+// ESM named exports above

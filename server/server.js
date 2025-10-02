@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
 
 import productRoutes from './routes/ProductRoute.js';
-// import appointmentRouter from './routes/AppointmentRoutes.js';
+import appointmentRouter from './routes/AppointmentRoutes.js';
 
 
 dotenv.config();
@@ -21,7 +21,7 @@ app.use(express.json()); // allows us to accept JSON data in the req.body
 
 // Routes
 app.use("/api/products", productRoutes)
-//app.use("/api/appointments",appointmentRouter);
+app.use("/api/appointments", appointmentRouter);
 
 
 app.listen(PORT, () => {
