@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { SidebarProvider, useSidebar } from "./context/SidebarContext";
@@ -24,6 +26,7 @@ import Checkout from "./pages/Checkout";
 import { ProductList, ProductAdd, ProductDashboard } from "./Features/petProduct";
 import AppointmentList from "./Features/appointments/AppointmentList";
 import AppointmentAdd from "./Features/appointments/AppointmentAdd";
+import VetDashboard from "./Features/medicalRecords/vetDashboard";
 
 
 const AdminLayout = () => {
@@ -81,6 +84,7 @@ function App() {
             <Route path="products/list" element={<ProductList />} />
             <Route path="products/add" element={<ProductAdd />} />
             <Route path="appointments" element={<AppointmentList />} />
+            <Route path="medical-records" element={<VetDashboard />} />
           </Route>
 
           <Route path="/appointmentAdd" element={<AppointmentAdd />} />
@@ -90,6 +94,7 @@ function App() {
         <ConditionalFooter />
         <Cart />
       </Router>
+        <ToastContainer position="top-right" autoClose={3000} />
         </SidebarProvider>
       </CartProvider>
     </AuthProvider>
