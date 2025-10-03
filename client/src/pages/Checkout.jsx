@@ -32,13 +32,40 @@ function Checkout() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      alert('Order placed successfully! Thank you for your purchase.');
-      clearCart();
-      navigate('/');
+    try {
+      // Prepare order data for payment
+      const orderData = {
+        customerInfo: {
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+        },
+        shippingAddress: {
+          address: formData.address,
+          city: formData.city,
+          postalCode: formData.postalCode,
+        },
+        items: cartItems,
+        totalItems,
+        totalPrice,
+        paymentMethod: formData.paymentMethod,
+        orderDate: new Date().toISOString(),
+      };
+
+      // Navigate to payment page with order data
+      navigate('/payment', { 
+        state: { 
+          orderData,
+          source: 'product_order',
+          amount: totalPrice 
+        } 
+      });
+    } catch (error) {
+      console.error('Error processing order:', error);
+      alert('Error processing order. Please try again.');
+    } finally {
       setIsSubmitting(false);
-    }, 2000);
+    }
   };
 
   if (cartItems.length === 0) {

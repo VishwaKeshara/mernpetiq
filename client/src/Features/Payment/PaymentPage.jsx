@@ -8,15 +8,19 @@ import {
   CardCvcElement,
 } from "@stripe/react-stripe-js";
 import { paymentBaseURL } from "../../axiosinstance.js";
+import { useCart } from "../../context/CartContext";
 
 export default function PaymentPage() {
   const stripe = useStripe();
   const elements = useElements();
   const location = useLocation();
   const navigate = useNavigate();
+  const { clearCart } = useCart();
 
-  // Get appointment data from navigation state
-  const appointmentData = location.state?.appointment;
+  // Get data from navigation state (for product orders) or appointment data
+  const navigationData = location.state;
+  const appointmentData = navigationData?.appointment;
+  const orderData = navigationData?.orderData;
 
   const MAX_CARDS = 3;
 
@@ -81,35 +85,47 @@ export default function PaymentPage() {
       return Number.isFinite(n) && n >= 0 ? n : null;
     };
 
-    const urlTotal = readNum(params.get("total"));
-    const urlCurrency = params.get("currency")?.toUpperCase();
-    const lsTotal = readNum(localStorage.getItem("vms:total"));
-    const lsCurrency = localStorage.getItem("vms:currency")?.toUpperCase();
-    const amount = urlTotal ?? lsTotal ?? 0;
+    // Check for order data from navigation state first
+    let amount, source, ref;
+    if (orderData) {
+      amount = orderData.totalPrice;
+      source = "product_order";
+      ref = `ORDER_${Date.now()}`;
+    } else if (appointmentData) {
+      amount = appointmentData.price;
+      source = "appointment";
+      ref = appointmentData._id || `APPT_${Date.now()}`;
+    } else {
+      // Fall back to URL params and localStorage
+      const urlTotal = readNum(params.get("total"));
+      const lsTotal = readNum(localStorage.getItem("vms:total"));
+      amount = urlTotal ?? lsTotal ?? 0;
+      
+      const urlSource = params.get("source");
+      const urlRef = params.get("ref");
+      const lsSource = localStorage.getItem("vms:source");
+      const lsRef = localStorage.getItem("vms:ref");
+      source = (urlSource || lsSource || "unknown").toString().trim();
+      ref = (urlRef || lsRef || "").toString().trim() || null;
+    }
 
-    let currency = /^[A-Z]{3}$/.test(urlCurrency || "") ? urlCurrency : lsCurrency || "USD";
+    const urlCurrency = params.get("currency")?.toUpperCase();
+    const lsCurrency = localStorage.getItem("vms:currency")?.toUpperCase();
+    let currency = /^[A-Z]{3}$/.test(urlCurrency || "") ? urlCurrency : lsCurrency || "LKR";
     try {
       new Intl.NumberFormat(undefined, { style: "currency", currency }).format(1);
     } catch {
-      currency = "USD";
+      currency = "LKR";
     }
 
-    const urlSource = params.get("source");
-    const urlRef = params.get("ref");
-    const lsSource = localStorage.getItem("vms:source");
-    const lsRef = localStorage.getItem("vms:ref");
-
-    const source = (urlSource || lsSource || "unknown").toString().trim();
-    const ref = (urlRef || lsRef || "").toString().trim() || null;
-
     return { amount, currency, source, ref };
-  }, []);
+  }, [orderData, appointmentData]);
 
   const formattedTotal = useMemo(() => {
     try {
       return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
     } catch {
-      return `$${Number(amount || 0).toFixed(2)}`;
+      return `Rs. ${Number(amount || 0).toLocaleString()}`;
     }
   }, [amount, currency]);
 
@@ -566,7 +582,7 @@ export default function PaymentPage() {
             new Intl.NumberFormat(undefined, { style: "currency", currency }).format(finalAmount)
           );
         } catch {
-          setPaidAmount(`$${finalAmount.toFixed(2)}`);
+          setPaidAmount(`Rs. ${finalAmount.toLocaleString()}`);
         }
         setStep("success");
         return;
@@ -591,7 +607,7 @@ export default function PaymentPage() {
         new Intl.NumberFormat(undefined, { style: "currency", currency }).format(finalAmount)
       );
     } catch {
-      setPaidAmount(`$${finalAmount.toFixed(2)}`);
+      setPaidAmount(`Rs. ${finalAmount.toLocaleString()}`);
     }
     setStep("success");
     } catch (error) {
@@ -991,7 +1007,9 @@ export default function PaymentPage() {
                 {IconSuccessCard}
                 <h1 className="mt-8 text-3xl font-semibold text-gray-900">Payment Successful!</h1>
                 <p className="mt-3 text-gray-700">
-                  {appointmentData ? "Your appointment has been confirmed and payment processed." : "Payment done Successfully"}
+                  {appointmentData ? "Your appointment has been confirmed and payment processed." : 
+                   orderData ? "Your order has been placed successfully and payment processed." : 
+                   "Payment done Successfully"}
                 </p>
 
                 {appointmentData && (
@@ -1032,6 +1050,44 @@ export default function PaymentPage() {
                   </div>
                 )}
 
+                {orderData && (
+                  <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 text-left max-w-lg mx-auto">
+                    <h3 className="text-lg font-semibold text-blue-800 mb-4 text-center">Order Confirmed</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Customer:</span>
+                        <span className="font-medium text-gray-800">{orderData.customerInfo.fullName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Email:</span>
+                        <span className="font-medium text-gray-800">{orderData.customerInfo.email}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Items:</span>
+                        <span className="font-medium text-gray-800">{orderData.totalItems} items</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Shipping to:</span>
+                        <span className="font-medium text-gray-800">{orderData.shippingAddress.city}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Order Date:</span>
+                        <span className="font-medium text-gray-800">
+                          {new Date(orderData.orderDate).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between pt-3 border-t border-blue-200">
+                        <span className="text-lg font-semibold text-blue-800">Amount Paid:</span>
+                        <span className="text-lg font-bold text-blue-800">Rs. {Number(orderData.totalPrice || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-6 inline-block text-left border-2 border-gray-400 rounded-xl px-6 py-5 shadow-sm">
                   <div className="grid grid-cols-[auto_1fr] gap-x-10 gap-y-3 min-w-[380px]">
                     <div className="text-gray-700">Amount Paid:</div>
@@ -1062,6 +1118,23 @@ export default function PaymentPage() {
                       type="button"
                       onClick={() => navigate('/delivery', { state: { appointment: appointmentData } })}
                       className="inline-flex items-center rounded-full bg-amber-500 hover:bg-amber-600 text-white px-8 py-3 font-semibold transition-colors"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                        <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1V8a1 1 0 00-1-1h-3z"/>
+                      </svg>
+                      Continue to Delivery
+                    </button>
+                  )}
+                  {orderData && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Clear cart after successful order
+                        clearCart();
+                        navigate('/delivery', { state: { order: orderData } });
+                      }}
+                      className="inline-flex items-center rounded-full bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 font-semibold transition-colors"
                     >
                       <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
