@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from "./context/AuthContext";
@@ -11,7 +11,7 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Profile from "./pages/profile";
 
-import Navbar from "./components/navbar";
+import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Sidebar from "./components/Sidebar";
 import Cart from "./components/Cart";
@@ -26,6 +26,12 @@ import Checkout from "./pages/Checkout";
 import { ProductList, ProductAdd, ProductDashboard } from "./Features/petProduct";
 import AppointmentList from "./Features/appointments/AppointmentList";
 import AppointmentAdd from "./Features/appointments/AppointmentAdd";
+import PaymentPage from "./Features/Payment/PaymentPage";
+import DeliveryPage from "./Features/Delivery/DeliveryPage";
+import AdminPayments from "./Features/Payment/AdminPayments";
+import AdminCards from "./Features/Payment/AdminCards";
+import AdminAddresses from "./Features/Delivery/AdminAddresses";
+
 import VetDashboard from "./Features/medicalRecords/vetDashboard";
 
 
@@ -77,15 +83,33 @@ function App() {
           <Route path="/product/:id" element={<ProductProfile />} />
           <Route path="/checkout" element={<Checkout />} />
 
+
+           <Route path="/payment" element={<PaymentPage />} />
+          <Route path="/delivery" element={<DeliveryPage />} />
+          
+
+
+
+
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="userlist" element={<Employees />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="products" element={<ProductDashboard />} />
             <Route path="products/list" element={<ProductList />} />
             <Route path="products/add" element={<ProductAdd />} />
+            <Route path="payments" element={<AdminPayments/>}/>
+            <Route path="cards" element={<AdminCards />} />
+            <Route path="addresses" element={<AdminAddresses />} />
+
             <Route path="appointments" element={<AppointmentList />} />
             <Route path="medical-records" element={<VetDashboard />} />
           </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+
+
+          
+
 
           <Route path="/appointmentAdd" element={<AppointmentAdd />} />
           <Route path="/appointmentList" element={<AppointmentList />} />
