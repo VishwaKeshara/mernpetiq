@@ -1,6 +1,6 @@
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const API_BASE = "http://localhost:4242";
 const USER_ID = "guest"; 
@@ -12,6 +12,10 @@ const PROVINCES = [
 
 export default function DeliveryPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get appointment data from navigation state
+  const appointmentData = location.state?.appointment;
 
   
   const params = new URLSearchParams(window.location.search);

@@ -14,3 +14,8 @@ export const appointmentBaseURL = axios.create({
 export const medicalRecordBaseURL = axios.create({
   baseURL: 'http://localhost:5000/api/medical-records'
 });
+
+// Payment API client - unified with main server
+export const paymentBaseURL = axios.create({
+  baseURL: "http://localhost:5000/api",
+});

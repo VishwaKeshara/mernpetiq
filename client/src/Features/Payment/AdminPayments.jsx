@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-
+import { paymentBaseURL } from "../../axiosinstance.js";
 
 export default function AdminPayments() {
-  const API_BASE = "http://localhost:4242";
 
   
   const [source, setSource] = useState("any");
@@ -35,14 +34,14 @@ export default function AdminPayments() {
       const refClean = refText.trim();
       if (refClean) params.set("ref", refClean);
 
-      const url = `${API_BASE}/api/db/tx${params.toString() ? `?${params.toString()}` : ""}`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const queryParams = params.toString() ? `?${params.toString()}` : "";
+      const response = await paymentBaseURL.get(`/db/tx${queryParams}`);
+      const data = response.data;
       if (!Array.isArray(data)) throw new Error("Unexpected response");
       setRows(data);
     } catch (e) {
       console.error(e);
-      setError(e.message || "Failed to load transactions");
+      setError(e.response?.data?.error || e.message || "Failed to load transactions");
       setRows([]);
     } finally {
       setLoading(false);
@@ -82,16 +81,14 @@ export default function AdminPayments() {
     if (!window.confirm(`Delete ${selected.size} record(s)?`)) return;
 
     try {
-      const res = await fetch(`${API_BASE}/api/admin/tx/bulk-delete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: Array.from(selected) }),
+      const response = await paymentBaseURL.post("/admin/tx/bulk-delete", {
+        ids: Array.from(selected)
       });
-      const out = await res.json();
-      if (!res.ok || out.error) throw new Error(out.error || "Delete failed");
+      const out = response.data;
+      if (out.error) throw new Error(out.error || "Delete failed");
       await fetchTx();
     } catch (e) {
-      alert(e.message || "Delete failed");
+      alert(e.response?.data?.error || e.message || "Delete failed");
     }
   };
 

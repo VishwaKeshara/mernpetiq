@@ -6,6 +6,7 @@ import { connectDB } from './config/db.js';
 import productRoutes from './routes/ProductRoute.js';
 import appointmentRouter from './routes/AppointmentRoutes.js';
 import medicalRecordsRouter from './routes/medicalRecords.js';
+import paymentRoutes from './routes/PaymentRoutes.js';
 
 
 dotenv.config();
@@ -30,6 +31,7 @@ app.use((req, res, next) => {
 app.use("/api/products", productRoutes)
 app.use("/api/appointments", appointmentRouter);
 app.use('/api/medical-records', medicalRecordsRouter);
+app.use('/', paymentRoutes);
 
 
 app.listen(PORT, () => {

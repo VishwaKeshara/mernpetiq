@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const cardSchema = new mongoose.Schema({
   pmId: { type: String, unique: true, index: true },
@@ -20,5 +20,7 @@ const txSchema = new mongoose.Schema({
   description: String,  
 }, { timestamps: true });
 
-module.exports = mongoose.model("Card", cardSchema);
-module.exports.Tx = mongoose.model("Tx", txSchema);
+const Card = mongoose.model("Card", cardSchema);
+export const Tx = mongoose.model("Tx", txSchema);
+
+export default Card;

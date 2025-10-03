@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   useStripe,
   useElements,
@@ -6,12 +7,17 @@ import {
   CardExpiryElement,
   CardCvcElement,
 } from "@stripe/react-stripe-js";
+import { paymentBaseURL } from "../../axiosinstance.js";
 
 export default function PaymentPage() {
   const stripe = useStripe();
   const elements = useElements();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const API_BASE = "http://localhost:4242";
+  // Get appointment data from navigation state
+  const appointmentData = location.state?.appointment;
+
   const MAX_CARDS = 3;
 
   const inputBase =
@@ -265,8 +271,8 @@ export default function PaymentPage() {
 
   async function loadCards() {
     try {
-      const res = await fetch(`${API_BASE}/api/payment-methods`);
-      const list = await res.json();
+      const res = await paymentBaseURL.get("/payment-methods");
+      const list = res.data;
       if (Array.isArray(list)) {
         const mapped = list.map((pm) => ({
           id: pm.id,
@@ -313,14 +319,12 @@ export default function PaymentPage() {
   }
   async function handleDeleteCard(id) {
     try {
-      const res = await fetch(`${API_BASE}/api/payment-method/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to delete on server");
+      const res = await paymentBaseURL.delete(`/payment-method/${id}`);
       await loadCards();
       setSelectedId((cur) => (cur === id ? null : cur));
       setConfirmDeleteId(null);
     } catch (e) {
-      alert(e?.message || "Failed to delete card");
+      alert(e?.response?.data?.error || e?.message || "Failed to delete card");
     }
   }
 
@@ -351,6 +355,30 @@ export default function PaymentPage() {
       if (Object.values(reqErrors).some(Boolean)) return;
 
       if (!stripe || !elements) {
+        // Check if this is a demo setup intent (indicating demo mode)
+        const setupResponse = await paymentBaseURL.post("/create-setup-intent", {});
+        const si = setupResponse.data;
+        
+        if (si?.clientSecret?.includes("demo")) {
+          // Demo mode - simulate successful card save
+          const demoCard = {
+            id: "pm_demo_" + Date.now(),
+            last4: "4242",
+            name: nameOnCard.trim(),
+            brand: "visa",
+            expMonth: parseInt(expiryRaw.slice(0, 2)),
+            expYear: parseInt("20" + expiryRaw.slice(2, 4)),
+            expiryDisplay: formatExpiry(expiryRaw)
+          };
+          
+          setSavedCards((prev) => [...prev, demoCard]);
+          setSaving(false);
+          setStep("review");
+          setFlash("Demo card saved successfully!");
+          setTimeout(() => setFlash(""), 3000);
+          return;
+        }
+        
         setCardError("Stripe is not ready yet. Please try again.");
         return;
       }
@@ -358,11 +386,8 @@ export default function PaymentPage() {
       try {
         setSaving(true);
 
-        const si = await fetch(`${API_BASE}/api/create-setup-intent`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        }).then((r) => r.json());
+        const setupResponse = await paymentBaseURL.post("/create-setup-intent", {});
+        const si = setupResponse.data;
 
         if (!si?.clientSecret) {
           setCardError(si?.error || "Couldn't start card save.");
@@ -385,7 +410,8 @@ export default function PaymentPage() {
         }
 
         const pmId = setupIntent.payment_method;
-        const pm = await fetch(`${API_BASE}/api/payment-method/${pmId}`).then((r) => r.json());
+        const pmResponse = await paymentBaseURL.get(`/payment-method/${pmId}`);
+        const pm = pmResponse.data;
 
         const brand = pm?.brand || pm?.card?.brand || "";
         const last4 = pm?.last4 || pm?.card?.last4 || "••••";
@@ -437,13 +463,12 @@ export default function PaymentPage() {
       const yy = Number(expiryRaw.slice(2, 4));
       const yyyy = 2000 + yy;
 
-      const res = await fetch(`${API_BASE}/api/payment-method/${editingId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: nameOnCard.trim(), exp_month: mm, exp_year: yyyy }),
+      const updateResponse = await paymentBaseURL.patch(`/payment-method/${editingId}`, {
+        name: nameOnCard.trim(),
+        exp_month: mm,
+        exp_year: yyyy
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to update card");
+      const data = updateResponse.data;
 
       setSavedCards((prev) =>
         prev.map((c) =>
@@ -515,23 +540,37 @@ export default function PaymentPage() {
     const description =
       source && source !== "unknown" ? `${source.toUpperCase()} ${ref || ""}`.trim() : undefined;
 
-    const res = await fetch(`${API_BASE}/api/create-payment-intent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      const paymentResponse = await paymentBaseURL.post("/create-payment-intent", {
         amount: cents,
         currency,
         payment_method: selectedId,
         source,
         ref_id: ref,
         description,
-      }),
-    }).then((r) => r.json());
+      });
+      const res = paymentResponse.data;
 
-    if (res.error) {
-      setCardError(res.error);
-      return;
-    }
+      if (res.error) {
+        setCardError(res.error);
+        return;
+      }
+
+      // Check for demo mode
+      if (res.clientSecret && res.clientSecret.includes("demo")) {
+        // Demo mode - simulate successful payment
+        const finalAmount = res.amount ? res.amount / 100 : Number(amount || 0);
+        setPaidAt(new Date());
+        try {
+          setPaidAmount(
+            new Intl.NumberFormat(undefined, { style: "currency", currency }).format(finalAmount)
+          );
+        } catch {
+          setPaidAmount(`$${finalAmount.toFixed(2)}`);
+        }
+        setStep("success");
+        return;
+      }
 
     if (res.requiresAction && res.clientSecret) {
       if (!stripe) {
@@ -555,6 +594,9 @@ export default function PaymentPage() {
       setPaidAmount(`$${finalAmount.toFixed(2)}`);
     }
     setStep("success");
+    } catch (error) {
+      setCardError(error?.response?.data?.error || error?.message || "Payment failed");
+    }
   }
 
   // Icons
@@ -623,6 +665,59 @@ export default function PaymentPage() {
                   ? "Update the card holder name or expiry date."
                   : "Please provide a credit or debit card for future payments. This card will be set as the default payment method for your account."}
               </p>
+
+              {/* Appointment Summary */}
+              {appointmentData && (
+                <div className="mb-6 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-amber-800 mb-3 flex items-center">
+                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                    </svg>
+                    Appointment Summary
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Owner:</span>
+                        <span className="font-medium text-gray-800">{appointmentData.ownerName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Pet:</span>
+                        <span className="font-medium text-gray-800">{appointmentData.petName} ({appointmentData.petType})</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Service:</span>
+                        <span className="font-medium text-gray-800">{appointmentData.service}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Veterinarian:</span>
+                        <span className="font-medium text-gray-800">{appointmentData.vet}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Date:</span>
+                        <span className="font-medium text-gray-800">
+                          {new Date(appointmentData.date).toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Time:</span>
+                        <span className="font-medium text-gray-800">{appointmentData.time}</span>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t border-amber-200">
+                        <span className="text-lg font-semibold text-amber-800">Total Amount:</span>
+                        <span className="text-lg font-bold text-amber-800">Rs. {Number(appointmentData.price || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* form-level Stripe error */}
               {cardError && (
@@ -894,8 +989,48 @@ export default function PaymentPage() {
             <div className="w-full flex items-center justify-center min-h-[70vh]">
               <div className="text-center">
                 {IconSuccessCard}
-                <h1 className="mt-8 text-3xl font-semibold text-gray-900">Thank You!</h1>
-                <p className="mt-3 text-gray-700">Payment done Successfully</p>
+                <h1 className="mt-8 text-3xl font-semibold text-gray-900">Payment Successful!</h1>
+                <p className="mt-3 text-gray-700">
+                  {appointmentData ? "Your appointment has been confirmed and payment processed." : "Payment done Successfully"}
+                </p>
+
+                {appointmentData && (
+                  <div className="mt-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 text-left max-w-lg mx-auto">
+                    <h3 className="text-lg font-semibold text-green-800 mb-4 text-center">Appointment Confirmed</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Pet Owner:</span>
+                        <span className="font-medium text-gray-800">{appointmentData.ownerName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Pet:</span>
+                        <span className="font-medium text-gray-800">{appointmentData.petName} ({appointmentData.petType})</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Service:</span>
+                        <span className="font-medium text-gray-800">{appointmentData.service}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Veterinarian:</span>
+                        <span className="font-medium text-gray-800">{appointmentData.vet}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Date & Time:</span>
+                        <span className="font-medium text-gray-800">
+                          {new Date(appointmentData.date).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })} at {appointmentData.time}
+                        </span>
+                      </div>
+                      <div className="flex justify-between pt-3 border-t border-green-200">
+                        <span className="text-lg font-semibold text-green-800">Amount Paid:</span>
+                        <span className="text-lg font-bold text-green-800">Rs. {Number(appointmentData.price || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mt-6 inline-block text-left border-2 border-gray-400 rounded-xl px-6 py-5 shadow-sm">
                   <div className="grid grid-cols-[auto_1fr] gap-x-10 gap-y-3 min-w-[380px]">
@@ -921,14 +1056,31 @@ export default function PaymentPage() {
                   </div>
                 </div>
 
-                <p className="mt-4 text-sm text-gray-500">Click the button below to return to the home page.</p>
-                <button
-                  type="button"
-                  onClick={() => window.location.assign("/")}
-                  className="mt-6 inline-flex items-center rounded-full bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3"
-                >
-                  Home
-                </button>
+                <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+                  {appointmentData && (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/delivery', { state: { appointment: appointmentData } })}
+                      className="inline-flex items-center rounded-full bg-amber-500 hover:bg-amber-600 text-white px-8 py-3 font-semibold transition-colors"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                        <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1V8a1 1 0 00-1-1h-3z"/>
+                      </svg>
+                      Continue to Delivery
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/')}
+                    className="inline-flex items-center rounded-full bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 font-semibold transition-colors"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+                    </svg>
+                    Return Home
+                  </button>
+                </div>
               </div>
             </div>
           )}

@@ -1,7 +1,22 @@
-const mongoose = require("mongoose");
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const Card = require("../Model/PaymentModel");
-const Tx = require("../Model/PaymentModel").Tx;
+import mongoose from "mongoose";
+import Stripe from "stripe";
+import Card from "../Model/PaymentModel.js";
+import { Tx } from "../Model/PaymentModel.js";
+
+// Initialize Stripe only if secret key is provided and valid
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripeMode = process.env.STRIPE_MODE;
+let stripe = null;
+let isDemoMode = stripeMode === 'demo';
+
+if (stripeSecretKey && stripeSecretKey !== 'sk_test_your_stripe_secret_key_here' && stripeSecretKey.startsWith('sk_') && !isDemoMode) {
+  stripe = new Stripe(stripeSecretKey);
+  console.log('✅ Stripe configured successfully');
+} else if (isDemoMode) {
+  console.log('🧪 Running in Stripe DEMO mode - payments will be simulated');
+} else {
+  console.warn('⚠️  Stripe not configured: STRIPE_SECRET_KEY missing or invalid. Payment features will be disabled.');
+}
 
 // Helper functions
 const isValidObjectId = (v) => mongoose.Types.ObjectId.isValid(v);
@@ -9,6 +24,10 @@ const isValidObjectId = (v) => mongoose.Types.ObjectId.isValid(v);
 let CACHED_CUSTOMER_ID = process.env.STRIPE_CUSTOMER_ID || null;
 
 async function getOrCreateDemoCustomer() {
+  if (!stripe) {
+    throw new Error("Stripe not configured");
+  }
+  
   if (CACHED_CUSTOMER_ID) return CACHED_CUSTOMER_ID;
   const email = process.env.DEMO_CUSTOMER_EMAIL || "demo@example.com";
   try {
@@ -44,6 +63,20 @@ const getOrder = (req, res) => {
 };
 
 const createSetupIntent = async (req, res) => {
+  if (isDemoMode) {
+    // Return mock setup intent for demo mode
+    return res.json({ 
+      clientSecret: "seti_demo_client_secret_" + Date.now(),
+      customer: "cus_demo_customer" 
+    });
+  }
+  
+  if (!stripe) {
+    return res.status(503).json({ 
+      error: "Payment service not configured. Please set up Stripe API keys or enable demo mode." 
+    });
+  }
+  
   try {
     const customer = await getOrCreateDemoCustomer();
     const si = await stripe.setupIntents.create({
@@ -58,6 +91,25 @@ const createSetupIntent = async (req, res) => {
 };
 
 const getPaymentMethod = async (req, res) => {
+  if (isDemoMode) {
+    // Return mock payment method for demo mode
+    return res.json({
+      id: req.params.pmId,
+      brand: "visa",
+      last4: "4242",
+      exp_month: 12,
+      exp_year: 2025,
+      customer: "cus_demo_customer",
+      billing_name: "Demo User",
+    });
+  }
+
+  if (!stripe) {
+    return res.status(503).json({ 
+      error: "Payment service not configured. Please set up Stripe API keys or enable demo mode." 
+    });
+  }
+
   try {
     const pm = await stripe.paymentMethods.retrieve(req.params.pmId);
     if (pm && pm.card) {
@@ -206,6 +258,40 @@ const createPaymentIntent = async (req, res) => {
     description =
       (description ?? "").toString().trim() ||
       (source ? `${source.toUpperCase()} ${ref_id || ""}`.trim() : undefined);
+
+    if (isDemoMode) {
+      // Demo mode - simulate successful payment
+      const demoPaymentId = "pi_demo_" + Date.now();
+      
+      // Save demo transaction to database
+      await Tx.updateOne(
+        { piId: demoPaymentId },
+        {
+          $set: {
+            amount: amount,
+            currency: currency,
+            status: "succeeded",
+            source,
+            ref_id,
+            description: description || "Demo payment",
+          },
+        },
+        { upsert: true }
+      );
+
+      return res.json({ 
+        success: true, 
+        id: demoPaymentId, 
+        status: "succeeded", 
+        amount: amount 
+      });
+    }
+
+    if (!stripe) {
+      return res.status(503).json({ 
+        error: "Payment service not configured. Please set up Stripe API keys or enable demo mode." 
+      });
+    }
 
     const customer = await getOrCreateDemoCustomer();
 
@@ -447,17 +533,36 @@ const deleteTransactions = async (req, res) => {
 };
 
 //Export all functions  
-exports.getOrder = getOrder;
-exports.createSetupIntent = createSetupIntent;
-exports.getPaymentMethod = getPaymentMethod;
-exports.getPaymentMethods = getPaymentMethods;
-exports.updatePaymentMethod = updatePaymentMethod;
-exports.setDefaultPaymentMethod = setDefaultPaymentMethod;
-exports.deletePaymentMethod = deletePaymentMethod;
-exports.createPaymentIntent = createPaymentIntent;
-exports.createRefund = createRefund;
-exports.getCards = getCards;
-exports.getTransactions = getTransactions;
-exports.getAdminTransactions = getAdminTransactions;
-exports.bulkDeleteTransactions = bulkDeleteTransactions;
-exports.deleteTransactions = deleteTransactions;
+export {
+  getOrder,
+  createSetupIntent,
+  getPaymentMethod,
+  getPaymentMethods,
+  updatePaymentMethod,
+  setDefaultPaymentMethod,
+  deletePaymentMethod,
+  createPaymentIntent,
+  createRefund,
+  getCards,
+  getTransactions,
+  getAdminTransactions,
+  bulkDeleteTransactions,
+  deleteTransactions
+};
+
+export default {
+  getOrder,
+  createSetupIntent,
+  getPaymentMethod,
+  getPaymentMethods,
+  updatePaymentMethod,
+  setDefaultPaymentMethod,
+  deletePaymentMethod,
+  createPaymentIntent,
+  createRefund,
+  getCards,
+  getTransactions,
+  getAdminTransactions,
+  bulkDeleteTransactions,
+  deleteTransactions
+};
