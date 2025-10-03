@@ -84,7 +84,8 @@ function AppointmentList() {
 
   const handleUpdate = (appointment) => {
     // Navigate to the add/update form with the selected appointment as state
-    navigate(`/appointmentAdd`, { state: appointment });
+    // Pass a flag so the form knows to return to admin page after update
+    navigate(`/appointmentAdd`, { state: { ...appointment, fromAdmin: isAdminView } });
   };
 
   const handleDownloadPDF = () => {

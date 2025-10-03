@@ -195,9 +195,16 @@ const VetDashboard = () => {
 
   const handleEditRecord = async (recordData) => {
     try {
-  const response = await medicalRecordBaseURL.put(`/${recordData._id}`, recordData);
+      // Ensure we have the record ID for updating
+      const recordId = editingRecord?._id || recordData._id;
+      if (!recordId) {
+        toast.error('Record ID is missing. Cannot update record.');
+        return;
+      }
+
+      const response = await medicalRecordBaseURL.put(`/${recordId}`, recordData);
       setRecords(prev => prev.map(r => 
-        r._id === recordData._id ? response.data.data : r
+        r._id === recordId ? response.data.data : r
       ));
       setEditingRecord(null);
       toast.success('Medical record updated successfully!');
@@ -354,7 +361,10 @@ const VetDashboard = () => {
             </div>
             <div className="flex space-x-3">
               <button
-                onClick={() => setShowForm(true)}
+                onClick={() => {
+                  console.log('New Record button clicked');
+                  setShowForm(true);
+                }}
                 className="flex items-center space-x-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
               >
                 <Plus className="w-5 h-5" />
@@ -469,9 +479,10 @@ const VetDashboard = () => {
       {(showForm || editingRecord) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {console.log('Rendering form modal. showForm:', showForm, 'editingRecord:', editingRecord)}
             <MedicalRecordForm
               onSubmit={editingRecord ? handleEditRecord : handleCreateRecord}
-              initialData={editingRecord}
+              initial={editingRecord || {}}
               onCancel={() => {
                 setShowForm(false);
                 setEditingRecord(null);
