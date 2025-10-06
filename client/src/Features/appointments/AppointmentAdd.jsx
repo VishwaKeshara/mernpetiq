@@ -74,8 +74,8 @@ function AppointmentAdd() {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const { data } = await appointmentBaseURL.get("/appointmentList");
-        setExistingAppointments(data?.appointmentList || []);
+        const { data } = await appointmentBaseURL.get("/");
+        setExistingAppointments(data?.appointments || []);
       } catch (error) {
         console.log("Error fetching appointments:", error);
       }
@@ -137,10 +137,13 @@ function AppointmentAdd() {
 
   const handleSubmit = async () => {
     try {
+      // Validate all required fields
       if (Object.values(appointmentForm).some((f) => !f)) {
         alert("All fields are required!");
         return;
       }
+
+      // Validate time
       if (
         appointmentForm.time < OPEN_TIME ||
         appointmentForm.time > LAST_START_TIME
@@ -148,6 +151,8 @@ function AppointmentAdd() {
         alert("Please select a time between 08:00 and 23:00.");
         return;
       }
+
+      // Check for conflicts
       if (
         checkForConflict(
           appointmentForm.vet,
@@ -159,18 +164,54 @@ function AppointmentAdd() {
         alert("Selected time conflicts with another appointment.");
         return;
       }
-      const endpoint = isUpdating ? "/updateAppointment" : "/addappointment";
-      const { data } = await appointmentBaseURL.post(endpoint, appointmentForm);
+
+      // Make the API request
+      const endpoint = isUpdating ? `/${appointmentForm._id}` : "/";
+      const method = isUpdating ? "put" : "post";
+      
+      console.log('Submitting appointment:', {
+        method,
+        endpoint,
+        data: appointmentForm
+      });
+      
+      const { data } = await appointmentBaseURL[method](endpoint, appointmentForm);
+      
       if (data?.success) {
-        alert(data.message);
         if (isUpdating) {
+          alert("Appointment updated successfully!");
           navigate("/appointmentList");
         } else {
-          navigate("/payment", { state: { appointment: appointmentForm } });
+          // Navigate to payment with the created appointment's data
+          const appointmentPrice = Number(data.appointment.price);
+          console.log('Navigating to payment with price:', appointmentPrice);
+          navigate("/payment", { 
+            state: { 
+              amount: appointmentPrice,
+              currency: "usd",
+              source: "hospital",
+              ref: data.appointment._id,
+              appointment: data.appointment,
+              step: "review", // Start on the review step
+              description: data.appointment.service || "Hospital appointment"
+            } 
+          });
         }
+      } else {
+        throw new Error(data?.message || "Failed to create appointment");
       }
     } catch (error) {
-      console.log(error);
+      console.error('Appointment submission error:', {
+        error,
+        response: error.response?.data,
+        status: error.response?.status,
+        message: error.message
+      });
+      alert(
+        error.response?.data?.message || 
+        error.message || 
+        "Failed to submit appointment. Please try again."
+      );
     }
   };
 
