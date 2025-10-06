@@ -2,9 +2,13 @@ import { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { SidebarProvider, useSidebar } from "./context/SidebarContext";
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";      
@@ -84,13 +88,13 @@ function App() {
           <Route path="/checkout" element={<Checkout />} />
 
 
-           <Route path="/payment" element={<PaymentPage />} />
+           <Route path="/payment" element={
+              <Elements stripe={stripePromise}>
+                <PaymentPage />
+              </Elements>
+            } />
           <Route path="/delivery" element={<DeliveryPage />} />
           
-
-
-
-
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="userlist" element={<Employees />} />
             <Route path="dashboard" element={<Dashboard />} />
