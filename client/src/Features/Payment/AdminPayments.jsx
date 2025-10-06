@@ -2,9 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 
 
 export default function AdminPayments() {
-  const API_BASE = "http://localhost:4242";
+  const API_BASE = "http://localhost:5000/api/payment";
 
-  
   const [source, setSource] = useState("any");
   const [refText, setRefText] = useState("");
 
@@ -13,6 +12,7 @@ export default function AdminPayments() {
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
   const [error, setError] = useState("");
+  const [serviceText, setServiceText] = useState("");
 
   
   const fmtAmount = (cents, currency) => {
@@ -34,8 +34,10 @@ export default function AdminPayments() {
       if (source && source !== "any") params.set("source", source);
       const refClean = refText.trim();
       if (refClean) params.set("ref", refClean);
+      if (serviceText.trim()) params.set("service", serviceText.trim());
 
-      const url = `${API_BASE}/api/db/tx${params.toString() ? `?${params.toString()}` : ""}`;
+      const url = `${API_BASE}/payments${params.toString() ? `?${params.toString()}` : ""}`;
+
       const res = await fetch(url);
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error("Unexpected response");
@@ -52,7 +54,6 @@ export default function AdminPayments() {
   
   useEffect(() => {
     fetchTx();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const allChecked = useMemo(
@@ -82,7 +83,8 @@ export default function AdminPayments() {
     if (!window.confirm(`Delete ${selected.size} record(s)?`)) return;
 
     try {
-      const res = await fetch(`${API_BASE}/api/admin/tx/bulk-delete`, {
+      const res = await fetch(`http://localhost:5000/api/payment/admin/tx/bulk-delete`, {
+
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: Array.from(selected) }),
@@ -98,6 +100,8 @@ export default function AdminPayments() {
   const resetFilters = () => {
     setSource("any");
     setRefText("");
+     setServiceText("");
+  fetchTx();
   };
 
   const onSearch = async (e) => {
@@ -133,6 +137,15 @@ export default function AdminPayments() {
             className="w-full border rounded-md h-10 px-3"
           />
         </div>
+        <div>
+ <label className="block text-sm text-gray-700 mb-1">Service</label>
+  <input
+    value={serviceText}
+    onChange={(e) => setServiceText(e.target.value)}
+    placeholder="Vaccination, Groom, Dental, etc."
+    className="w-full border rounded-md h-10 px-3"
+  />
+</div>
 
         <div className="flex gap-3">
           <button
