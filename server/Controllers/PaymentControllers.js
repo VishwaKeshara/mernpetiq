@@ -1,463 +1,462 @@
-const mongoose = require("mongoose");
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const Card = require("../Model/PaymentModel");
-const Tx = require("../Model/PaymentModel").Tx;
+import '../loadEnv.js';
+import mongoose from "mongoose";
+import Stripe from "stripe";
+import { Card, Tx } from "../Model/PaymentModel.js";
+import AppointmentModel from '../Model/AppointmentModel.js';
 
-// Helper functions
-const isValidObjectId = (v) => mongoose.Types.ObjectId.isValid(v);
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeKey) {
+    throw new Error('STRIPE_SECRET_KEY must be defined in environment variables');
+}
+const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' });
 
 let CACHED_CUSTOMER_ID = process.env.STRIPE_CUSTOMER_ID || null;
 
-async function getOrCreateDemoCustomer() {
-  if (CACHED_CUSTOMER_ID) return CACHED_CUSTOMER_ID;
-  const email = process.env.DEMO_CUSTOMER_EMAIL || "demo@example.com";
-  try {
-    const found = await stripe.customers.search({ query: `email:'${email}'` });
-    if (found.data.length) {
-      CACHED_CUSTOMER_ID = found.data[0].id;
-      return CACHED_CUSTOMER_ID;
-    }
-  } catch (e) {
-    console.warn("Customer search failed, will create:", e.message);
-  }
-  const created = await stripe.customers.create({ email, name: "VMS Demo Customer" });
-  CACHED_CUSTOMER_ID = created.id;
-  return CACHED_CUSTOMER_ID;
-}
 
-function escapeRegex(s = "") {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-// Order data
-const ORDERS = {
-  demo1: { amount_cents: 4999, currency: "usd", description: "Outpatient bill #demo1" },
-  demo2: { amount_cents: 12999, currency: "usd", description: "Cart #demo2" },
-  demo3: { amount_cents: 2599, currency: "usd", description: "Lab tests #demo3" },
-};
-
-// Controller functions
-const getOrder = (req, res) => {
-  const o = ORDERS[req.params.id];
-  if (!o) return res.status(404).json({ error: "Order not found" });
-  res.json(o);
-};
-
-const createSetupIntent = async (req, res) => {
-  try {
-    const customer = await getOrCreateDemoCustomer();
-    const si = await stripe.setupIntents.create({
-      usage: "off_session",
-      customer,
-    });
-    return res.json({ clientSecret: si.client_secret, customer });
-  } catch (err) {
-    console.error("create-setup-intent error:", err);
-    return res.status(400).json({ error: err.message || "create-setup-intent failed" });
-  }
-};
-
-const getPaymentMethod = async (req, res) => {
-  try {
-    const pm = await stripe.paymentMethods.retrieve(req.params.pmId);
-    if (pm && pm.card) {
-      return res.json({
-        id: pm.id,
-        brand: pm.card.brand,
-        last4: pm.card.last4,
-        exp_month: pm.card.exp_month,
-        exp_year: pm.card.exp_year,
-        customer: pm.customer || null,
-        billing_name: pm.billing_details?.name || null,
-      });
-    }
-    return res.json(pm);
-  } catch (err) {
-    console.error("get payment-method error:", err);
-    return res.status(400).json({ error: err.message || "retrieve payment method failed" });
-  }
-};
-
-const getPaymentMethods = async (req, res) => {
-  try {
-    const customer = await getOrCreateDemoCustomer();
-    const list = await stripe.paymentMethods.list({ customer, type: "card" });
-
-    const cards = list.data.map((pm) => ({
-      pmId: pm.id,
-      brand: pm.card?.brand,
-      last4: pm.card?.last4,
-      exp_month: pm.card?.exp_month,
-      exp_year: pm.card?.exp_year,
-      billing_name: pm.billing_details?.name || null,
-      stripe_customer: pm.customer || customer,
-    }));
-
-    await Promise.all(
-      cards.map((c) => Card.updateOne({ pmId: c.pmId }, { $set: c }, { upsert: true }))
-    );
-
-    res.json(
-      cards.map((c) => ({
-        id: c.pmId,
-        brand: c.brand,
-        last4: c.last4,
-        exp_month: c.exp_month,
-        exp_year: c.exp_year,
-        billing_name: c.billing_name,
-      }))
-    );
-  } catch (err) {
-    console.error("list payment-methods error:", err);
-    res.status(400).json({ error: err.message || "list failed" });
-  }
-};
-
-const updatePaymentMethod = async (req, res) => {
-  try {
-    const { name, exp_month, exp_year } = req.body;
-
-    if (!name && !exp_month && !exp_year) {
-      return res.status(400).json({ error: "Provide name and/or exp_month, exp_year" });
-    }
-
-    const update = {};
-    if (name) update.billing_details = { name };
-    if (exp_month || exp_year) {
-      update.card = {};
-      if (exp_month) update.card.exp_month = Number(exp_month);
-      if (exp_year) update.card.exp_year = Number(exp_year);
-    }
-
-    const pm = await stripe.paymentMethods.update(req.params.pmId, update);
-
+export async function getOrCreateDemoCustomer() {
+    if (CACHED_CUSTOMER_ID) return CACHED_CUSTOMER_ID;
+    const email = process.env.DEMO_CUSTOMER_EMAIL || "demo@example.com";
     try {
-      await Card.updateOne(
-        { pmId: pm.id },
-        {
-          $set: {
-            billing_name: pm.billing_details?.name || null,
-            exp_month: pm.card?.exp_month,
-            exp_year: pm.card?.exp_year,
-            brand: pm.card?.brand,
-            last4: pm.card?.last4,
-            stripe_customer: pm.customer || null,
-          },
-        },
-        { upsert: true }
-      );
+        const found = await stripe.customers.search({ query: `email:'${email}'` });
+        if (found.data.length) {
+            CACHED_CUSTOMER_ID = found.data[0].id;
+            return CACHED_CUSTOMER_ID;
+        }
     } catch (e) {
-      console.warn("Mongo mirror failed (update PM):", e.message);
+        console.warn("Customer search failed, will create:", e.message);
     }
+    const created = await stripe.customers.create({ email, name: "VMS Demo Customer" });
+    CACHED_CUSTOMER_ID = created.id;
+    return CACHED_CUSTOMER_ID;
+}
 
-    res.json({
-      id: pm.id,
-      billing_name: pm.billing_details?.name || null,
-      exp_month: pm.card?.exp_month,
-      exp_year: pm.card?.exp_year,
-    });
-  } catch (err) {
-    console.error("update payment-method error:", err);
-    res.status(400).json({ error: err.message || "update failed" });
-  }
+// Create a setup intent for saving cards
+export const createSetupIntent = async (req, res) => {
+    try {
+        const customer = await getOrCreateDemoCustomer();
+        const setupIntent = await stripe.setupIntents.create({
+            customer: customer,
+            usage: 'off_session',
+            automatic_payment_methods: { enabled: true }
+        });
+        return res.json({
+            clientSecret: setupIntent.client_secret,
+            customerId: customer
+        });
+    } catch (error) {
+        console.error('Setup intent creation error:', error);
+        return res.status(400).json({ 
+            error: error.message || 'Failed to create setup intent' 
+        });
+    }
 };
 
-const setDefaultPaymentMethod = async (req, res) => {
-  try {
-    const { pmId } = req.body;
-    if (!pmId) return res.status(400).json({ error: "pmId is required" });
-    const customer = await getOrCreateDemoCustomer();
-    const updated = await stripe.customers.update(customer, {
-      invoice_settings: { default_payment_method: pmId },
-    });
-    res.json({ success: true, customer: updated.id, default_pm: pmId });
-  } catch (err) {
-    console.error("set-default error:", err);
-    res.status(400).json({ error: err.message || "set default failed" });
-  }
+// Get all saved payment methods (cards) for the current customer
+export const getPaymentMethods = async (req, res) => {
+    try {
+        const customer = await getOrCreateDemoCustomer();
+        
+        const paymentMethods = await stripe.paymentMethods.list({
+            customer: customer,
+            type: 'card'
+        });
+
+    
+       for (const pm of paymentMethods.data) {
+    
+    const existing = await Card.findOne({ pmId: pm.id });
+    if (!existing) {
+        await Card.create({
+            pmId: pm.id,
+            brand: pm.card.brand,
+            last4: pm.card.last4,
+            exp_month: pm.card.exp_month,
+            exp_year: pm.card.exp_year,
+            billing_name: pm.billing_details?.name || "",
+            stripe_customer: customer,
+            metadata: pm.metadata
+        });
+    } else {
+        
+        await Card.findOneAndUpdate(
+            { pmId: pm.id },
+            {
+                brand: pm.card.brand,
+                last4: pm.card.last4,
+                billing_name: pm.billing_details?.name || "",
+                stripe_customer: customer,
+                metadata: pm.metadata
+            }
+        );
+    }
+}
+
+        
+        const cards = await Card.find({ stripe_customer: customer })
+            .sort({ createdAt: -1 })
+            .limit(3);
+
+        res.json(cards);
+    } catch (error) {
+        console.error('Error fetching payment methods:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching payment methods',
+            error: error.message
+        });
+    }
 };
 
-const deletePaymentMethod = async (req, res) => {
-  try {
-    await stripe.paymentMethods.detach(req.params.pmId);
-    await Card.deleteOne({ pmId: req.params.pmId });
-    res.json({ success: true });
-  } catch (err) {
-    console.error("detach payment-method error:", err);
-    res.status(400).json({ error: err.message || "detach failed" });
-  }
+// Get a specific payment method
+export const getPaymentMethod = async (req, res) => {
+    try {
+        const { pmId } = req.params;
+        const paymentMethod = await stripe.paymentMethods.retrieve(pmId);
+        const customer = await getOrCreateDemoCustomer();
+
+        // Save/update card in DB
+        const card = await Card.findOneAndUpdate(
+            { pmId },
+            {
+                pmId,
+                brand: paymentMethod.card.brand,
+                last4: paymentMethod.card.last4,
+                exp_month: paymentMethod.card.exp_month,
+                exp_year: paymentMethod.card.exp_year,
+                billing_name: paymentMethod.billing_details.name,
+                stripe_customer: customer,
+                metadata: paymentMethod.metadata
+            },
+            { upsert: true, new: true }
+        );
+
+        res.json(card);
+    } catch (error) {
+        console.error('Error fetching payment method:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching payment method',
+            error: error.message
+        });
+    }
 };
 
-const createPaymentIntent = async (req, res) => {
-  try {
-    let { amount, currency, payment_method, source, ref_id, description } = req.body;
-    if (amount == null || !currency || !payment_method) {
-      return res.status(400).json({ error: "amount, currency, and payment_method are required" });
+// Delete a payment method (card)
+export const deletePaymentMethod = async (req, res) => {
+    try {
+        const { pmId } = req.params;
+    
+        try {
+            await stripe.paymentMethods.detach(pmId);
+        } catch (err) {
+            console.error('Stripe detach failed:', err); 
+        }
+        
+        await Card.findOneAndDelete({ pmId });
+        res.json({
+            success: true,
+            message: 'Payment method deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting payment method (outer catch):', error); 
+        res.status(500).json({
+            success: false,
+            message: 'Error deleting payment method',
+            error: error.message
+        });
     }
-
-    amount = Number(amount);
-    if (!Number.isInteger(amount) || amount < 1) {
-      return res.status(400).json({ error: "amount must be an integer (cents) >= 1" });
-    }
-    currency = String(currency).toLowerCase();
-
-    source = (source ?? "").toString().trim() || null;
-    ref_id = (ref_id ?? "").toString().trim() || null;
-    description =
-      (description ?? "").toString().trim() ||
-      (source ? `${source.toUpperCase()} ${ref_id || ""}`.trim() : undefined);
-
-    const customer = await getOrCreateDemoCustomer();
-
-    const pm = await stripe.paymentMethods.retrieve(payment_method);
-    if (!pm) return res.status(400).json({ error: "Invalid payment_method" });
-    if (!pm.customer) {
-      await stripe.paymentMethods.attach(payment_method, { customer });
-    } else if (pm.customer !== customer) {
-      return res.status(400).json({ error: "Payment method belongs to a different customer" });
-    }
-
-    const metadata = {};
-    if (source) metadata.source = source;
-    if (ref_id) metadata.ref_id = ref_id;
-
-    const pi = await stripe.paymentIntents.create({
-      amount,
-      currency,
-      customer,
-      payment_method,
-      confirm: true,
-      off_session: true,
-      automatic_payment_methods: { enabled: true },
-      description,
-      metadata,
-    });
-
-    if (pi.status === "requires_action" && pi.next_action?.type === "use_stripe_sdk") {
-      return res.json({ requiresAction: true, clientSecret: pi.client_secret, amount: pi.amount });
-    }
-
-    await Tx.updateOne(
-      { piId: pi.id },
-      {
-        $set: {
-          amount: pi.amount,
-          currency: pi.currency,
-          status: pi.status,
-          source,
-          ref_id,
-          description: pi.description || description || null,
-        },
-      },
-      { upsert: true }
-    );
-
-    return res.json({ success: true, id: pi.id, status: pi.status, amount: pi.amount });
-  } catch (err) {
-    const pi = err?.raw?.payment_intent;
-    if (pi && pi.status === "requires_action") {
-      return res.json({ requiresAction: true, clientSecret: pi.client_secret, amount: pi.amount });
-    }
-    console.error("create-payment-intent error:", err);
-    return res.status(400).json({ error: err.message || "create-payment-intent failed" });
-  }
 };
 
-const createRefund = async (req, res) => {
-  try {
-    const { payment_intent, amount } = req.body;
-    if (!payment_intent) return res.status(400).json({ error: "payment_intent is required" });
-    const refund = await stripe.refunds.create({
-      payment_intent,
-      amount: amount ? Number(amount) : undefined,
-    });
-    res.json({ success: true, refund });
-  } catch (err) {
-    console.error("refund error:", err);
-    res.status(400).json({ error: err.message || "refund failed" });
-  }
+// Update a payment method 
+export const updatePaymentMethod = async (req, res) => {
+    try {
+        const { pmId } = req.params;
+        const { billing_details, exp_month, exp_year } = req.body;
+
+        
+        console.log("PATCH /payment-method/:pmId", { pmId, billing_details, exp_month, exp_year });
+
+        if (billing_details) {
+            await stripe.paymentMethods.update(pmId, { billing_details });
+        }
+        const updateData = { };
+        if (billing_details && billing_details.name)
+            updateData.billing_name = billing_details.name;
+        if (typeof exp_month !== "undefined") updateData.exp_month = exp_month;
+        if (typeof exp_year !== "undefined") updateData.exp_year = exp_year;
+
+        
+        console.log("Update Data:", updateData);
+
+        const card = await Card.findOneAndUpdate(
+            { pmId },
+            updateData,
+            { upsert: true, new: true }
+        );
+        res.json(card);
+    } catch (error) {
+        console.error("ERROR in PATCH /payment-method/:pmId", error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating payment method',
+            error: error.message
+        });
+    }
 };
 
-const getCards = async (req, res) => {
-  if (!mongoose.connection.readyState) return res.json([]);
-  const cards = await Card.find({}).sort({ updatedAt: -1 }).lean();
-  res.json(cards);
+// CREATE PAYMENT INTENT (charge card)
+export const createPaymentIntent = async (req, res) => {
+    try {
+        let { amount, currency = 'usd', payment_method, source, ref_id, description } = req.body;
+
+        // Validate amount
+        if (amount === undefined || amount === null) {
+            return res.status(400).json({ 
+                error: "Amount is required",
+                received: { amount, type: typeof amount }
+            });
+        }
+        amount = Math.round(Number(amount));
+        if (!Number.isFinite(amount) || amount < 1) {
+            return res.status(400).json({ 
+                error: "Amount must be a valid number greater than 0",
+                received: { amount, type: typeof amount }
+            });
+        }
+        // Validate payment method
+        if (!payment_method) {
+            return res.status(400).json({ 
+                error: "Payment method is required",
+                received: { payment_method }
+            });
+        }
+        // Validate currency
+        currency = currency.toLowerCase();
+        if (!/^[a-z]{3}$/.test(currency)) {
+            return res.status(400).json({ 
+                error: "Invalid currency format",
+                received: { currency }
+            });
+        }
+        
+        const customer = await getOrCreateDemoCustomer();
+
+        // Validate payment method attachment
+        try {
+            const pm = await stripe.paymentMethods.retrieve(payment_method);
+            if (!pm) {
+                return res.status(400).json({ error: "Invalid payment method" });
+            }
+            if (!pm.customer) {
+                await stripe.paymentMethods.attach(payment_method, { customer });
+            } else if (pm.customer !== customer) {
+                return res.status(400).json({ error: "Payment method belongs to a different customer" });
+            }
+        } catch (error) {
+            console.error('Payment method validation error:', error);
+            return res.status(400).json({ 
+                error: "Invalid payment method",
+                details: error.message 
+            });
+        }
+
+        // Create payment intent
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: amount,
+            currency: currency,
+            customer: customer,
+            payment_method: payment_method,
+            confirm: true,
+            off_session: true,
+            description: description || 'Hospital appointment payment',
+            metadata: {
+                source: source || 'hospital',
+                ref_id: ref_id || ''
+            },
+            confirmation_method: 'automatic',
+        });
+
+        // Save transaction to DB
+        const tx = await Tx.create({
+            piId: paymentIntent.id,
+            amount: paymentIntent.amount,
+            currency: paymentIntent.currency,
+            status: paymentIntent.status,
+            source: source || 'hospital',
+            ref_id: ref_id || '',
+            description: description || 'Hospital appointment payment',
+            stripe_customer: customer,
+            payment_method: payment_method,
+            metadata: paymentIntent.metadata
+        });
+
+        // Handle different payment intent statuses
+        if (paymentIntent.status === 'succeeded') {
+            // If this is an appointment payment, update the appointment status
+            if (source === 'hospital' && ref_id) {
+                await AppointmentModel.findByIdAndUpdate(
+                    ref_id,
+                    {
+                        paymentStatus: 'completed',
+                        paymentIntentId: paymentIntent.id,
+                        updatedAt: new Date()
+                    }
+                );
+            }
+            return res.json({
+                success: true,
+                amount: paymentIntent.amount,
+                currency: paymentIntent.currency,
+                id: paymentIntent.id,
+                paymentIntentId: paymentIntent.id,
+                status: paymentIntent.status
+            });
+        } else if (paymentIntent.status === 'requires_action') {
+            return res.json({
+                requiresAction: true,
+                clientSecret: paymentIntent.client_secret
+            });
+        } else {
+            return res.json({
+                success: false,
+                status: paymentIntent.status,
+                message: 'Payment requires additional handling'
+            });
+        }
+    } catch (error) {
+        console.error('Payment intent creation error:', error);
+        return res.status(400).json({
+            error: error.message,
+            type: error.type,
+            code: error.code
+        });
+    }
 };
 
-const getTransactions = async (req, res) => {
-  try {
-    if (!mongoose.connection.readyState) return res.json([]);
-    const q = {};
-    if (req.query.source) q.source = req.query.source;
-    if (req.query.ref) q.ref_id = req.query.ref;
-    const tx = await Tx.find(q).sort({ createdAt: -1 }).lean();
-    res.json(tx);
-  } catch (e) {
-    console.error("/api/db/tx error:", e);
-    res.status(500).json({ error: "failed to fetch transactions" });
-  }
+// ADMIN: Get all payments/transactions
+
+export const getAllPayments = async (req, res) => {
+    try {
+        const filter = {};
+        if (req.query.source && req.query.source !== "any") {
+            filter.source = req.query.source;
+        }
+        if (req.query.ref) {
+            filter.ref_id = { $regex: req.query.ref, $options: "i" };
+        }
+        if (req.query.service) {
+            filter.description = { $regex: req.query.service, $options: "i" };
+        }
+        const transactions = await Tx.find(filter).sort({ createdAt: -1 });
+        res.json(transactions);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching all payments',
+            error: error.message
+        });
+    }
 };
 
-const getAdminTransactions = async (req, res) => {
-  try {
-    if (!mongoose.connection.readyState) return res.json([]);
-
-    const {
-      source,
-      ref,
-      currency,
-      status,
-      q,
-      min,
-      max,
-      from, 
-      to,   
-    } = req.query;
-
-    const query = {};
-
-    if (source && source !== "any") query.source = source;
-    if (currency && currency !== "any") query.currency = String(currency).toLowerCase();
-    if (status && status !== "any") query.status = status;
-
-    if (ref) {
-      query.ref_id = { $regex: escapeRegex(ref), $options: "i" };
+// Update appointment payment status
+export const updateAppointmentPaymentStatus = async (req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        const { paymentIntentId, paymentStatus } = req.body;
+        if (!appointmentId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Appointment ID is required'
+            });
+        }
+        const updatedAppointment = await AppointmentModel.findByIdAndUpdate(
+            appointmentId,
+            {
+                paymentIntentId,
+                paymentStatus,
+                updatedAt: new Date()
+            },
+            { new: true }
+        );
+        if (!updatedAppointment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Appointment not found'
+            });
+        }
+        res.json({
+            success: true,
+            appointment: updatedAppointment
+        });
+    } catch (error) {
+        console.error('Error updating appointment payment status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating appointment payment status',
+            error: error.message
+        });
     }
-
-    const minCents = Number.isFinite(Number(min)) ? Number(min) : null;
-    const maxCents = Number.isFinite(Number(max)) ? Number(max) : null;
-    if (minCents != null || maxCents != null) {
-      query.amount = {};
-      if (minCents != null) query.amount.$gte = minCents;
-      if (maxCents != null) query.amount.$lte = maxCents;
-    }
-
-    if (from || to) {
-      query.createdAt = {};
-      if (from) {
-        const d = new Date(from);
-        d.setHours(0, 0, 0, 0);
-        query.createdAt.$gte = d;
-      }
-      if (to) {
-        const d = new Date(to);
-        d.setHours(23, 59, 59, 999);
-        query.createdAt.$lte = d;
-      }
-    }
-
-    if (q) {
-      const rx = { $regex: escapeRegex(q), $options: "i" };
-      query.$or = [{ description: rx }, { source: rx }, { ref_id: rx }];
-    }
-
-    const tx = await Tx.find(query).sort({ createdAt: -1 }).lean();
-    res.json(tx);
-  } catch (e) {
-    console.error("/api/admin/tx error:", e);
-    res.status(500).json({ error: "failed to fetch transactions" });
-  }
 };
 
-const bulkDeleteTransactions = async (req, res) => {
-  try {
-    if (!mongoose.connection.readyState) {
-      return res.status(503).json({ error: "database not connected" });
+
+export const stripeWebhook = async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+    try {
+        event = stripe.webhooks.constructEvent(
+            req.body,
+            sig,
+            process.env.STRIPE_WEBHOOK_SECRET
+        );
+    } catch (err) {
+        console.error('Webhook signature verification failed:', err.message);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
     }
-
-    let { ids, all, source, ref } = req.body || {};
-
-    if (!all && !ids && !source && !ref) {
-      return res
-        .status(400)
-        .json({ error: "Provide 'all': true, or 'ids': [], or 'source/ref' to delete." });
+    try {
+        switch (event.type) {
+            case 'payment_intent.succeeded': {
+                const paymentIntent = event.data.object;
+                // Update transaction status in DB
+                await Tx.findOneAndUpdate(
+                    { piId: paymentIntent.id },
+                    { status: paymentIntent.status }
+                );
+                // Update appointment status if needed
+                if (paymentIntent.metadata.source === 'hospital' && paymentIntent.metadata.ref_id) {
+                    await AppointmentModel.findByIdAndUpdate(
+                        paymentIntent.metadata.ref_id,
+                        {
+                            paymentStatus: 'completed',
+                            paymentIntentId: paymentIntent.id,
+                            updatedAt: new Date()
+                        }
+                    );
+                }
+                break;
+            }
+            case 'payment_intent.payment_failed': {
+                const failedPayment = event.data.object;
+                await Tx.findOneAndUpdate(
+                    { piId: failedPayment.id },
+                    { status: failedPayment.status }
+                );
+                if (failedPayment.metadata.source === 'hospital' && failedPayment.metadata.ref_id) {
+                    await AppointmentModel.findByIdAndUpdate(
+                        failedPayment.metadata.ref_id,
+                        {
+                            paymentStatus: 'failed',
+                            paymentIntentId: failedPayment.id,
+                            updatedAt: new Date()
+                        }
+                    );
+                }
+                break;
+            }
+            
+        }
+        res.json({ received: true });
+    } catch (error) {
+        console.error('Error processing webhook:', error);
+        res.status(500).json({ error: 'Webhook processing failed' });
     }
-
-    if (all) {
-      const r = await Tx.deleteMany({});
-      return res.json({ success: true, deleted: r.deletedCount });
-    }
-
-    if (Array.isArray(ids) && ids.length) {
-      const objIds = ids.filter((x) => isValidObjectId(x));
-      const piIds = ids.filter((x) => !isValidObjectId(x));
-      let d1 = { deletedCount: 0 },
-        d2 = { deletedCount: 0 };
-      if (objIds.length) d1 = await Tx.deleteMany({ _id: { $in: objIds } });
-      if (piIds.length) d2 = await Tx.deleteMany({ piId: { $in: piIds } });
-      return res.json({
-        success: true,
-        deleted: (d1.deletedCount || 0) + (d2.deletedCount || 0),
-      });
-    }
-
-    const filter = {};
-    if (source) filter.source = source;
-    if (ref) filter.ref_id = ref;
-    const r = await Tx.deleteMany(filter);
-    return res.json({ success: true, deleted: r.deletedCount });
-  } catch (e) {
-    console.error("POST /api/admin/tx/bulk-delete error:", e);
-    res.status(500).json({ error: "failed to delete transactions" });
-  }
 };
-
-const deleteTransactions = async (req, res) => {
-  try {
-    if (!mongoose.connection.readyState) {
-      return res.status(503).json({ error: "database not connected" });
-    }
-
-    let { ids, all, source, ref } = req.body || {};
-    if (req.query.all === "true") all = true;
-
-    if (!all && !ids && !source && !ref) {
-      return res
-        .status(400)
-        .json({ error: "Provide 'all': true, or 'ids': [], or 'source/ref' to delete." });
-    }
-
-    if (all) {
-      const r = await Tx.deleteMany({});
-      return res.json({ success: true, deleted: r.deletedCount });
-    }
-
-    if (Array.isArray(ids) && ids.length) {
-      const objIds = ids.filter((x) => isValidObjectId(x));
-      const piIds = ids.filter((x) => !isValidObjectId(x));
-      let d1 = { deletedCount: 0 },
-        d2 = { deletedCount: 0 };
-      if (objIds.length) d1 = await Tx.deleteMany({ _id: { $in: objIds } });
-      if (piIds.length) d2 = await Tx.deleteMany({ piId: { $in: piIds } });
-      return res.json({
-        success: true,
-        deleted: (d1.deletedCount || 0) + (d2.deletedCount || 0),
-      });
-    }
-
-    const filter = {};
-    if (source) filter.source = source;
-    if (ref) filter.ref_id = ref;
-    const r = await Tx.deleteMany(filter);
-    return res.json({ success: true, deleted: r.deletedCount });
-  } catch (e) {
-    console.error("DELETE /api/db/tx error:", e);
-    res.status(500).json({ error: "failed to delete transactions" });
-  }
-};
-
-//Export all functions  
-exports.getOrder = getOrder;
-exports.createSetupIntent = createSetupIntent;
-exports.getPaymentMethod = getPaymentMethod;
-exports.getPaymentMethods = getPaymentMethods;
-exports.updatePaymentMethod = updatePaymentMethod;
-exports.setDefaultPaymentMethod = setDefaultPaymentMethod;
-exports.deletePaymentMethod = deletePaymentMethod;
-exports.createPaymentIntent = createPaymentIntent;
-exports.createRefund = createRefund;
-exports.getCards = getCards;
-exports.getTransactions = getTransactions;
-exports.getAdminTransactions = getAdminTransactions;
-exports.bulkDeleteTransactions = bulkDeleteTransactions;
-exports.deleteTransactions = deleteTransactions;
