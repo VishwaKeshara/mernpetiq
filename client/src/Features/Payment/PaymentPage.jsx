@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   useStripe,
   useElements,
@@ -6,12 +7,11 @@ import {
   CardExpiryElement,
   CardCvcElement,
 } from "@stripe/react-stripe-js";
+import { paymentBaseURL } from "../../axiosinstance";
 
 export default function PaymentPage() {
   const stripe = useStripe();
   const elements = useElements();
-
-  const API_BASE = "http://localhost:4242";
   const MAX_CARDS = 3;
 
   const inputBase =
@@ -34,9 +34,16 @@ export default function PaymentPage() {
   const formImages = ["/images/vmsp1.webp", "/images/vmsp2.webp", "/images/vmsp3.webp"];
   const reviewImages = ["/images/vmsp4.webp", "/images/vmsp5.webp", "/images/vmsp6.webp"];
 
-  const [step, setStep] = useState(() => new URLSearchParams(window.location.search).get("step") || "review");
-  const [mode, setMode] = useState(() => new URLSearchParams(window.location.search).get("mode") || "add"); // "add" | "edit"
+  const location = useLocation();
+  const [step, setStep] = useState(() => location.state?.step || "form");
+  const [mode, setMode] = useState(() => new URLSearchParams(location.search).get("mode") || "add"); // "add" | "edit"
   const [editingId, setEditingId] = useState(null);
+
+  useEffect(() => {
+    if (location.state?.step) {
+      setStep(location.state.step);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -54,7 +61,7 @@ export default function PaymentPage() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const t = params.get("total");
@@ -68,6 +75,17 @@ export default function PaymentPage() {
   }, []);
 
   const { amount, currency, source, ref } = useMemo(() => {
+    if (location.state?.amount) {
+      console.log('Using amount from state:', location.state.amount);
+      return {
+        amount: Number(location.state.amount),
+        currency: location.state.currency || 'usd',
+        source: location.state.source || 'hospital',
+        ref: location.state.ref
+      };
+    }
+
+    
     const params = new URLSearchParams(window.location.search);
     const readNum = (v) => {
       if (v == null) return null;
@@ -107,12 +125,12 @@ export default function PaymentPage() {
     }
   }, [amount, currency]);
 
-  
+
   const [cardNumber, setCardNumber] = useState("");
   const [cvv, setCvv] = useState("");
   const [nameOnCard, setNameOnCard] = useState("");
 
-  
+
   const [elStatus, setElStatus] = useState({
     cardNumber: { complete: false, error: "" },
     expiry: { complete: false, error: "" },
@@ -123,7 +141,7 @@ export default function PaymentPage() {
       ...s,
       [field]: { complete: ev.complete, error: ev.error?.message || "" },
     }));
-    
+
     if (ev.complete) {
       setErrors((er) => ({ ...er, [field]: null }));
     } else if (ev.error?.message) {
@@ -172,6 +190,55 @@ export default function PaymentPage() {
     }
     return raw;
   };
+
+  // Expiry validation 
+  const isExpiryValid = (mm, yyyy) => {
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    if (yyyy < currentYear) return false;
+    if (yyyy === currentYear && mm < currentMonth) return false;
+    if (mm < 1 || mm > 12) return false;
+    return true;
+  };
+
+  // Function to load saved cards
+  const loadCards = async () => {
+    try {
+      const { data } = await paymentBaseURL.get('/payment-methods');
+      setSavedCards(data.map(card => ({
+        id: card.pmId || card.id,
+        last4: card.last4,
+        name: card.billing_name || card.billing_details?.name || '',
+        brand: card.brand,
+        expMonth: card.exp_month,
+        expYear: card.exp_year,
+        expiryDisplay: card.exp_month && card.exp_year ? formatDisplayExpiry(card.exp_month, card.exp_year) : '—'
+      })));
+    } catch (error) {
+      setCardError('Failed to load saved cards');
+    }
+  };
+
+
+  useEffect(() => {
+    loadCards();
+  }, []);
+
+  useEffect(() => {
+  if (expiryRaw.length === 4) {
+    const mm = Number(expiryRaw.slice(0, 2));
+    const yy = Number(expiryRaw.slice(2, 4));
+    const yyyy = 2000 + yy;
+    if (!isExpiryValid(mm, yyyy)) {
+      setErrors(er => ({ ...er, expiry: "Expiry date is in the past." }));
+    } else {
+      setErrors(er => ({ ...er, expiry: null }));
+    }
+  } else if (errors.expiry) {
+    setErrors(er => ({ ...er, expiry: null }));
+  }
+}, [expiryRaw]);
 
   const [errors, setErrors] = useState({
     cardNumber: null,
@@ -263,27 +330,19 @@ export default function PaymentPage() {
     return `${mm}/${yyyy}`;
   };
 
-  async function loadCards() {
-    try {
-      const res = await fetch(`${API_BASE}/api/payment-methods`);
-      const list = await res.json();
-      if (Array.isArray(list)) {
-        const mapped = list.map((pm) => ({
-          id: pm.id,
-          last4: pm.last4,
-          name: pm.billing_name || "—",
-          brand: pm.brand || "",
-          expMonth: pm.exp_month,
-          expYear: pm.exp_year,
-          expiryDisplay:
-            pm.exp_month && pm.exp_year ? formatDisplayExpiry(pm.exp_month, pm.exp_year) : "—",
-        }));
-        setSavedCards(mapped);
-      }
-    } catch (e) {
-      console.warn("Failed to load cards:", e.message);
-    }
-  }
+  // Slider logic 
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const activeImages =
+    step === "form" ? formImages : step === "review" ? reviewImages : [];
+  useEffect(() => setCurrentImageIndex(0), [step]);
+  useEffect(() => {
+    if (!activeImages.length) return;
+    const id = setInterval(() => {
+      setCurrentImageIndex((i) => (i + 1) % activeImages.length);
+    }, 3500);
+    return () => clearInterval(id);
+  }, [activeImages.length, step]);
+
   useEffect(() => {
     if (step === "review") loadCards();
   }, [step]);
@@ -313,14 +372,12 @@ export default function PaymentPage() {
   }
   async function handleDeleteCard(id) {
     try {
-      const res = await fetch(`${API_BASE}/api/payment-method/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to delete on server");
+      await paymentBaseURL.delete(`/payment-method/${id}`);
       await loadCards();
       setSelectedId((cur) => (cur === id ? null : cur));
       setConfirmDeleteId(null);
-    } catch (e) {
-      alert(e?.message || "Failed to delete card");
+    } catch (error) {
+      setCardError(error?.response?.data?.error || 'Failed to delete card');
     }
   }
 
@@ -358,34 +415,34 @@ export default function PaymentPage() {
       try {
         setSaving(true);
 
-        const si = await fetch(`${API_BASE}/api/create-setup-intent`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        }).then((r) => r.json());
+      
+        const { data: setupData } = await paymentBaseURL.post('/create-setup-intent');
 
-        if (!si?.clientSecret) {
-          setCardError(si?.error || "Couldn't start card save.");
-          setSaving(false);
-          return;
+        if (!setupData?.clientSecret) {
+          throw new Error(setupData?.error || "Couldn't start card save.");
         }
 
         const numberEl = elements.getElement(CardNumberElement);
-        const { error, setupIntent } = await stripe.confirmCardSetup(si.clientSecret, {
+
+        const { error, setupIntent } = await stripe.confirmCardSetup(setupData.clientSecret, {
           payment_method: {
             card: numberEl,
-            billing_details: { name: nameOnCard.trim() },
+            billing_details: { 
+              name: nameOnCard.trim() 
+            },
           },
         });
 
         if (error) {
-          setCardError(error.message || "Card details invalid.");
-          setSaving(false);
-          return;
+          throw new Error(error.message || 'Card details are invalid');
+        }
+
+        if (!setupIntent?.payment_method) {
+          throw new Error('No payment method returned from Stripe');
         }
 
         const pmId = setupIntent.payment_method;
-        const pm = await fetch(`${API_BASE}/api/payment-method/${pmId}`).then((r) => r.json());
+        const { data: pm } = await paymentBaseURL.get(`/payment-method/${pmId}`);
 
         const brand = pm?.brand || pm?.card?.brand || "";
         const last4 = pm?.last4 || pm?.card?.last4 || "••••";
@@ -422,8 +479,17 @@ export default function PaymentPage() {
 
     // EDIT mode
     const hasExpiry = expiryRaw.length === 4;
+    const mm = Number(expiryRaw.slice(0, 2));
+    const yy = Number(expiryRaw.slice(2, 4));
+    const yyyy = 2000 + yy;
+    const expiryValid = hasExpiry && isExpiryValid(mm, yyyy);
+
     const reqErrors = {
-      expiry: hasExpiry ? null : "Enter full expiry as MM/YY.",
+      expiry: expiryValid
+        ? null
+        : hasExpiry
+        ? "Expiry date is in the past."
+        : "Enter full expiry as MM/YY.",
       nameOnCard: isNameValid() ? null : "Name on card is required.",
       cardNumber: null,
       cvv: null,
@@ -433,29 +499,27 @@ export default function PaymentPage() {
 
     try {
       setSaving(true);
-      const mm = Number(expiryRaw.slice(0, 2));
-      const yy = Number(expiryRaw.slice(2, 4));
-      const yyyy = 2000 + yy;
-
-      const res = await fetch(`${API_BASE}/api/payment-method/${editingId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: nameOnCard.trim(), exp_month: mm, exp_year: yyyy }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to update card");
+    
+      const { data: updatedCard } = await paymentBaseURL.patch(
+        `/payment-method/${editingId}`,
+        {
+          billing_details: { name: nameOnCard.trim() },
+          exp_month: mm,
+          exp_year: yyyy,
+        }
+      );
 
       setSavedCards((prev) =>
         prev.map((c) =>
           c.id === editingId
             ? {
                 ...c,
-                name: data.billing_name || nameOnCard.trim(),
-                expMonth: data.exp_month,
-                expYear: data.exp_year,
+                name: updatedCard.billing_name || nameOnCard.trim(),
+                expMonth: updatedCard.exp_month,
+                expYear: updatedCard.exp_year,
                 expiryDisplay:
-                  data.exp_month && data.exp_year
-                    ? formatDisplayExpiry(data.exp_month, data.exp_year)
+                  updatedCard.exp_month && updatedCard.exp_year
+                    ? formatDisplayExpiry(updatedCard.exp_month, updatedCard.exp_year)
                     : c.expiryDisplay,
               }
             : c
@@ -469,92 +533,10 @@ export default function PaymentPage() {
 
       loadCards();
     } catch (e) {
-      setCardError(e?.message || "Failed to save changes.");
+      setCardError(e?.response?.data?.error || e?.message || "Failed to save changes.");
     } finally {
       setSaving(false);
     }
-  }
-
-  // Image sliders
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const activeImages =
-    step === "form" ? formImages : step === "review" ? reviewImages : [];
-  useEffect(() => setCurrentImageIndex(0), [step]);
-  useEffect(() => {
-    if (!activeImages.length) return;
-    const id = setInterval(() => {
-      setCurrentImageIndex((i) => (i + 1) % activeImages.length);
-    }, 3500);
-    return () => clearInterval(id);
-  }, [activeImages.length, step]);
-
-  function toggleSelect(id) {
-    setSelectedId((cur) => (cur === id ? null : id));
-  }
-
-  const [paidAt, setPaidAt] = useState(null);
-  const [paidAmount, setPaidAmount] = useState("");
-  const formatDateTime = (d) => {
-    if (!d) return "";
-    try {
-      return new Intl.DateTimeFormat(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      }).format(d);
-    } catch {
-      return d.toLocaleString();
-    }
-  };
-
-  async function handleUsePayment() {
-    if (!selectedId) return;
-    const cents = Math.round(Number(amount || 0) * 100);
-    const description =
-      source && source !== "unknown" ? `${source.toUpperCase()} ${ref || ""}`.trim() : undefined;
-
-    const res = await fetch(`${API_BASE}/api/create-payment-intent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount: cents,
-        currency,
-        payment_method: selectedId,
-        source,
-        ref_id: ref,
-        description,
-      }),
-    }).then((r) => r.json());
-
-    if (res.error) {
-      setCardError(res.error);
-      return;
-    }
-
-    if (res.requiresAction && res.clientSecret) {
-      if (!stripe) {
-        setCardError("Stripe not ready. Try again.");
-        return;
-      }
-      const result = await stripe.confirmCardPayment(res.clientSecret);
-      if (result.error) {
-        setCardError(result.error.message || "Payment authentication failed.");
-        return;
-      }
-    }
-
-    const finalAmount = res.amount ? res.amount / 100 : Number(amount || 0);
-    setPaidAt(new Date());
-    try {
-      setPaidAmount(
-        new Intl.NumberFormat(undefined, { style: "currency", currency }).format(finalAmount)
-      );
-    } catch {
-      setPaidAmount(`$${finalAmount.toFixed(2)}`);
-    }
-    setStep("success");
   }
 
   // Icons
@@ -607,6 +589,96 @@ export default function PaymentPage() {
   const gridCols = step === "success" ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[2fr_1fr]";
   const editingCard = mode === "edit" ? savedCards.find((c) => c.id === editingId) : null;
   const maskedNumber = editingCard ? `${(editingCard.brand || "").toUpperCase()} •••• ${editingCard.last4}` : "";
+
+  const [paidAt, setPaidAt] = useState(null);
+  const [paidAmount, setPaidAmount] = useState("");
+  const formatDateTime = (d) => {
+    if (!d) return "";
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(d);
+    } catch {
+      return d.toLocaleString();
+    }
+  };
+
+  async function handleUsePayment() {
+     console.log("handleUsePayment called", selectedId);
+    if (!selectedId) {
+      setCardError('Please select a payment method');
+      return;
+    }
+    if (!amount || amount <= 0) {
+      setCardError('Invalid payment amount');
+      return;
+    }
+    try {
+      const amountInCents = Math.round(Number(amount || 0));
+      const paymentData = {
+        amount: amountInCents,
+        currency: 'usd',
+        payment_method: selectedId,
+        source: 'hospital',
+        ref_id: ref || '',
+        description: location.state?.description || 'Hospital appointment payment'
+      };
+      const { data: res } = await paymentBaseURL.post('/create-payment-intent', paymentData);
+      if (res.error) {
+        setCardError(res.error);
+        return;
+      }
+      if (res.requiresAction && res.clientSecret) {
+        if (!stripe) {
+          setCardError("Stripe not ready. Try again.");
+          return;
+        }
+        const result = await stripe.confirmCardPayment(res.clientSecret);
+        if (result.error) {
+          setCardError(result.error.message || "Payment authentication failed.");
+          return;
+        }
+        const { data: confirmRes } = await paymentBaseURL.post('/create-payment-intent', paymentData);
+        if (!confirmRes.success) {
+          setCardError("Payment failed after confirmation. Please try again.");
+          return;
+        }
+      
+        res = confirmRes;
+      }
+      if (!res.success) {
+        setCardError("Payment failed. Please try again.");
+        return;
+      }
+      const finalAmount = res.amount ? res.amount / 100 : Number(amount || 0);
+      setPaidAt(new Date());
+      try {
+        setPaidAmount(
+          new Intl.NumberFormat(undefined, { style: "currency", currency }).format(finalAmount)
+        );
+      } catch {
+        setPaidAmount(`$${finalAmount.toFixed(2)}`);
+      }
+      const params = new URLSearchParams(location.search);
+      const appointmentId = params.get('appointmentId');
+      if (appointmentId) {
+        try {
+          await paymentBaseURL.put(`/appointment/${appointmentId}/payment-status`, {
+            paymentIntentId: res.paymentIntentId,
+            paymentStatus: 'completed'
+          });
+        } catch (error) {}
+      }
+      setStep("success");
+    } catch (error) {
+      setCardError(error?.response?.data?.error || error?.message || 'Payment failed. Please try again.');
+      alert("API error: " + JSON.stringify(error?.response?.data || error?.message || error));
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -775,24 +847,20 @@ export default function PaymentPage() {
           {step === "review" && (
             <>
               <h2 className="text-2xl font-semibold">Payment Method</h2>
-
               {flash && (
                 <div className="mt-4 rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-yellow-800">
                   {flash}
                 </div>
               )}
-
               <div className="mt-6 border rounded-lg border-gray-300">
                 <div className="px-6 py-4 border-b border-gray-200">
                   <h3 className="text-lg font-semibold">Your Credit and Debit Cards</h3>
                 </div>
-
                 <div className="px-6 py-3 grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.8fr)] items-center text-sm text-gray-600">
                   <div>Card</div>
                   <div>Name on card</div>
                   <div className="text-right">Expires on</div>
                 </div>
-
                 <div className="pb-2 space-y-3">
                   {savedCards.map((card) => {
                     const selected = selectedId === card.id;
@@ -807,7 +875,7 @@ export default function PaymentPage() {
                           <div className="flex items-center gap-3">
                             <button
                               type="button"
-                              onClick={() => toggleSelect(card.id)}
+                              onClick={() => setSelectedId(card.id)}
                               aria-pressed={selected}
                               aria-label={selected ? "Unselect card" : "Select card"}
                               className={`h-4 w-4 rounded-full border ${
@@ -825,11 +893,9 @@ export default function PaymentPage() {
                               {card.brand ? `${card.brand.toUpperCase()} •••• ${card.last4}` : `Card ending in ${card.last4}`}
                             </div>
                           </div>
-
                           <div className="text-gray-900">{card.name || "—"}</div>
                           <div className="text-gray-900 text-right">{card.expiryDisplay || "—"}</div>
                         </div>
-
                         <div className="mt-2 flex items-center gap-4 text-sm">
                           <button
                             type="button"
@@ -854,7 +920,6 @@ export default function PaymentPage() {
                     );
                   })}
                 </div>
-
                 <div className="px-6 pb-6">
                   {atLimit ? (
                     <div className="w-full rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
@@ -875,7 +940,6 @@ export default function PaymentPage() {
                   )}
                 </div>
               </div>
-
               <button
                 type="button"
                 onClick={handleUsePayment}
@@ -896,31 +960,26 @@ export default function PaymentPage() {
                 {IconSuccessCard}
                 <h1 className="mt-8 text-3xl font-semibold text-gray-900">Thank You!</h1>
                 <p className="mt-3 text-gray-700">Payment done Successfully</p>
-
                 <div className="mt-6 inline-block text-left border-2 border-gray-400 rounded-xl px-6 py-5 shadow-sm">
                   <div className="grid grid-cols-[auto_1fr] gap-x-10 gap-y-3 min-w-[380px]">
                     <div className="text-gray-700">Amount Paid:</div>
                     <div className="text-right font-semibold text-gray-900 text-lg sm:text-xl">
                       {paidAmount || formattedTotal}
                     </div>
-
                     <div className="text-gray-700">Purpose:</div>
                     <div className="text-right text-gray-900 capitalize">{source}</div>
-
                     {ref && (
                       <>
                         <div className="text-gray-700">Reference:</div>
                         <div className="text-right text-gray-900">{ref}</div>
                       </>
                     )}
-
                     <div className="text-gray-700">Date &amp; Time:</div>
                     <div className="text-right text-gray-900 text-base sm:text-lg">
                       {formatDateTime(paidAt || new Date())}
                     </div>
                   </div>
                 </div>
-
                 <p className="mt-4 text-sm text-gray-500">Click the button below to return to the home page.</p>
                 <button
                   type="button"
@@ -933,7 +992,6 @@ export default function PaymentPage() {
             </div>
           )}
         </div>
-
         {/* RIGHT (Summary + slider) */}
         {step !== "success" && (
           <div className="p-8 lg:p-12 border-t lg:border-t-0 lg:border-l border-gray-300">
@@ -943,7 +1001,6 @@ export default function PaymentPage() {
                 <span>Total</span>
                 <span>{formattedTotal}</span>
               </div>
-
               <div className="mt-4 text-sm text-gray-600">
                 <div className="flex justify-between">
                   <span>Purpose</span>
@@ -957,7 +1014,6 @@ export default function PaymentPage() {
                 )}
               </div>
             </div>
-
             {activeImages.length > 0 && (
               <div className="mt-8 relative h-[420px]">
                 {activeImages.map((src, i) => (
@@ -980,7 +1036,6 @@ export default function PaymentPage() {
           </div>
         )}
       </div>
-
       {/* Delete confirm modal */}
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -999,7 +1054,6 @@ export default function PaymentPage() {
               </span>
               ? This action will permanently remove the card from your account.
             </p>
-
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
                 type="button"
