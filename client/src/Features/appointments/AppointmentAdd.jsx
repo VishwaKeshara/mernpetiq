@@ -203,7 +203,7 @@ function AppointmentAdd() {
         );
         setConflictWarning(
           hasConflict
-            ? `⚠️ Dr. ${updated.vet} already has an appointment on ${updated.date} at ${updated.time}.`
+            ? `⚠️ Dr. ${updated.vet} already has an appointment on ${updated.date} at ${updated.time}. Each appointment is 1 hour long, so this time slot is unavailable.`
             : ""
         );
       } else {
@@ -239,7 +239,7 @@ function AppointmentAdd() {
     ) {
       setErrors(prev => ({
         ...prev,
-        time: "Selected time conflicts with another appointment"
+        time: "Selected time conflicts with another appointment. Each appointment is 1 hour long."
       }));
       return;
     }
@@ -274,7 +274,17 @@ function AppointmentAdd() {
       }
     } catch (error) {
       console.error("Error submitting appointment:", error);
-      setErrors({ submit: "Failed to submit appointment. Please try again." });
+      
+      // Handle specific conflict error from backend
+      if (error.response?.status === 409) {
+        setErrors({ 
+          submit: error.response.data.message || "This time slot is already booked for the selected doctor."
+        });
+      } else if (error.response?.data?.message) {
+        setErrors({ submit: error.response.data.message });
+      } else {
+        setErrors({ submit: "Failed to submit appointment. Please try again." });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -292,7 +302,7 @@ function AppointmentAdd() {
     <motion.div
       className={`${isAdminView 
         ? "w-full" 
-        : "w-full min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50/30 to-purple-50 flex justify-center items-center px-4 py-8"
+        : "w-full min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50/30 to-orange-50 flex justify-center items-center px-4 py-8"
       }`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -301,7 +311,7 @@ function AppointmentAdd() {
       <motion.div
         className={`${isAdminView 
           ? "w-full bg-white shadow-lg rounded-xl border border-gray-200" 
-          : "w-full max-w-4xl bg-white shadow-2xl rounded-2xl border border-indigo-100"
+          : "w-full max-w-4xl bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl border border-yellow-100/50"
         } overflow-hidden`}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -309,8 +319,8 @@ function AppointmentAdd() {
       >
         {/* Header Section */}
         <div className={`${isAdminView 
-          ? "bg-gradient-to-r from-blue-600 to-indigo-600 p-6" 
-          : "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8"
+          ? "bg-gradient-to-r from-yellow-500 to-amber-500 p-6" 
+          : "bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500 p-8"
         }`}>
           <motion.div
             className="flex items-center justify-between"
@@ -346,11 +356,11 @@ function AppointmentAdd() {
         </div>
 
         {/* Form Section */}
-        <div className={`${isAdminView ? "p-6" : "p-8"}`}>
+        <div className={`${isAdminView ? "p-6" : "p-8"} bg-gradient-to-b from-white to-gray-50/30`}>
           {/* Error Display */}
           {errors.submit && (
             <motion.div
-              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2"
+              className="mb-6 p-4 bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-xl flex items-center space-x-2 shadow-sm"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
             >
@@ -362,7 +372,7 @@ function AppointmentAdd() {
           {/* Conflict Warning */}
           {conflictWarning && (
             <motion.div
-              className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center space-x-2"
+              className="mb-6 p-4 bg-amber-50/80 backdrop-blur-sm border border-amber-200 rounded-xl flex items-center space-x-2 shadow-sm"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
             >
@@ -371,13 +381,13 @@ function AppointmentAdd() {
             </motion.div>
           )}
 
-          <form className="space-y-6">
+          <form className="space-y-8">
             {/* Owner and Pet Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Owner Name */}
               <div className="space-y-2">
                 <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                  <FaUser className="text-blue-500" />
+                  <FaUser className="text-yellow-500" />
                   <span>Owner Name</span>
                 </label>
                 <input
@@ -385,10 +395,10 @@ function AppointmentAdd() {
                   name="ownerName"
                   value={appointmentForm.ownerName}
                   onChange={handleFormChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 bg-white/80 backdrop-blur-sm ${
                     errors.ownerName
                       ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                      : "border-gray-300 focus:border-blue-500 focus:ring-blue-200"
+                      : "border-yellow-200 focus:border-yellow-500 focus:ring-yellow-200 hover:border-yellow-300"
                   }`}
                   placeholder="Enter owner's full name"
                 />
@@ -403,7 +413,7 @@ function AppointmentAdd() {
               {/* Pet Name */}
               <div className="space-y-2">
                 <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                  <FaPaw className="text-green-500" />
+                  <FaPaw className="text-amber-500" />
                   <span>Pet Name</span>
                 </label>
                 <input
@@ -411,10 +421,10 @@ function AppointmentAdd() {
                   name="petName"
                   value={appointmentForm.petName}
                   onChange={handleFormChange}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 bg-white/80 backdrop-blur-sm ${
                     errors.petName
                       ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                      : "border-gray-300 focus:border-blue-500 focus:ring-blue-200"
+                      : "border-yellow-200 focus:border-yellow-500 focus:ring-yellow-200 hover:border-yellow-300"
                   }`}
                   placeholder="Enter pet's name"
                 />
@@ -430,17 +440,17 @@ function AppointmentAdd() {
             {/* Pet Type */}
             <div className="space-y-2">
               <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                <FaPaw className="text-purple-500" />
+                <FaPaw className="text-orange-500" />
                 <span>Pet Type</span>
               </label>
               <select
                 name="petType"
                 value={appointmentForm.petType}
                 onChange={handleFormChange}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 bg-white/80 backdrop-blur-sm ${
                   errors.petType
                     ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                    : "border-gray-300 focus:border-blue-500 focus:ring-blue-200"
+                    : "border-yellow-200 focus:border-yellow-500 focus:ring-yellow-200 hover:border-yellow-300"
                 }`}
               >
                 <option value="">Select pet type</option>
@@ -463,7 +473,7 @@ function AppointmentAdd() {
               {/* Service */}
               <div className="space-y-2">
                 <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                  <FaStethoscope className="text-indigo-500" />
+                  <FaStethoscope className="text-yellow-600" />
                   <span>Service</span>
                 </label>
                 <select
@@ -477,12 +487,12 @@ function AppointmentAdd() {
                     }
                   }}
                   disabled={isUpdating}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 bg-white/80 backdrop-blur-sm ${
                     isUpdating
                       ? "bg-gray-100 border-gray-200 cursor-not-allowed"
                       : errors.service
                       ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                      : "border-gray-300 focus:border-blue-500 focus:ring-blue-200"
+                      : "border-yellow-200 focus:border-yellow-500 focus:ring-yellow-200 hover:border-yellow-300"
                   }`}
                 >
                   <option value="">Select a service</option>
@@ -503,7 +513,7 @@ function AppointmentAdd() {
               {/* Price */}
               <div className="space-y-2">
                 <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                  <FaDollarSign className="text-green-500" />
+                  <FaDollarSign className="text-green-600" />
                   <span>Price (LKR)</span>
                 </label>
                 <input
@@ -512,12 +522,12 @@ function AppointmentAdd() {
                   value={appointmentForm.price}
                   onChange={handleFormChange}
                   disabled={isUpdating}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 bg-white/80 backdrop-blur-sm ${
                     isUpdating
                       ? "bg-gray-100 border-gray-200 cursor-not-allowed"
                       : errors.price
                       ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                      : "border-gray-300 focus:border-blue-500 focus:ring-blue-200"
+                      : "border-yellow-200 focus:border-yellow-500 focus:ring-yellow-200 hover:border-yellow-300"
                   }`}
                   placeholder="Enter service price"
                 />
@@ -533,17 +543,17 @@ function AppointmentAdd() {
             {/* Veterinarian */}
             <div className="space-y-2">
               <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                <FaUserMd className="text-blue-500" />
+                <FaUserMd className="text-blue-600" />
                 <span>Veterinarian</span>
               </label>
               <select
                 name="vet"
                 value={appointmentForm.vet}
                 onChange={handleFormChange}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 bg-white/80 backdrop-blur-sm ${
                   errors.vet
                     ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                    : "border-gray-300 focus:border-blue-500 focus:ring-blue-200"
+                    : "border-yellow-200 focus:border-yellow-500 focus:ring-yellow-200 hover:border-yellow-300"
                 }`}
               >
                 <option value="">Select a veterinarian</option>
@@ -566,7 +576,7 @@ function AppointmentAdd() {
               {/* Date */}
               <div className="space-y-2">
                 <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                  <FaCalendarAlt className="text-red-500" />
+                  <FaCalendarAlt className="text-red-600" />
                   <span>Appointment Date</span>
                 </label>
                 <input
@@ -575,10 +585,10 @@ function AppointmentAdd() {
                   value={appointmentForm.date}
                   onChange={handleFormChange}
                   min={minDate}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 bg-white/80 backdrop-blur-sm ${
                     errors.date
                       ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                      : "border-gray-300 focus:border-blue-500 focus:ring-blue-200"
+                      : "border-yellow-200 focus:border-yellow-500 focus:ring-yellow-200 hover:border-yellow-300"
                   }`}
                 />
                 {errors.date && (
@@ -592,7 +602,7 @@ function AppointmentAdd() {
               {/* Time */}
               <div className="space-y-2">
                 <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                  <FaClock className="text-orange-500" />
+                  <FaClock className="text-orange-600" />
                   <span>Appointment Time</span>
                 </label>
                 <input
@@ -608,10 +618,10 @@ function AppointmentAdd() {
                       : OPEN_TIME
                   }
                   max={LAST_START_TIME}
-                  className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 bg-white/80 backdrop-blur-sm ${
                     errors.time
                       ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                      : "border-gray-300 focus:border-blue-500 focus:ring-blue-200"
+                      : "border-yellow-200 focus:border-yellow-500 focus:ring-yellow-200 hover:border-yellow-300"
                   }`}
                 />
                 {appointmentForm.time && (
@@ -632,12 +642,12 @@ function AppointmentAdd() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-yellow-200">
               <motion.button
                 type="button"
                 onClick={handleCancel}
-                className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                whileHover={{ scale: 1.02 }}
+                className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 backdrop-blur-sm"
+                whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <FaTimes />
@@ -648,8 +658,8 @@ function AppointmentAdd() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+                className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-white rounded-xl hover:from-yellow-600 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl backdrop-blur-sm"
+                whileHover={{ scale: isSubmitting ? 1 : 1.02, y: isSubmitting ? 0 : -2 }}
                 whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
               >
                 <FaSave />

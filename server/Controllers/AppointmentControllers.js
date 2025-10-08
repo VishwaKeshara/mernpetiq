@@ -1,5 +1,41 @@
 import Appointment from "../Model/AppointmentModel.js";
 
+// Utility function to check if two appointment time slots conflict
+// Each appointment is assumed to be 1 hour long
+const checkTimeConflict = (time1, time2) => {
+    const convertToMinutes = (timeStr) => {
+        const [hours, minutes] = timeStr.split(":").map(Number);
+        return hours * 60 + minutes;
+    };
+
+    const start1 = convertToMinutes(time1);
+    const end1 = start1 + 60; // 1 hour duration
+    const start2 = convertToMinutes(time2);
+    const end2 = start2 + 60; // 1 hour duration
+
+    // Check if time slots overlap
+    return start1 < end2 && start2 < end1;
+};
+
+// Function to check if an appointment conflicts with existing appointments
+const hasConflictingAppointment = async (vet, date, time, excludeId = null) => {
+    try {
+        const query = { vet, date };
+        if (excludeId) {
+            query._id = { $ne: excludeId };
+        }
+
+        const existingAppointments = await Appointment.find(query);
+        
+        return existingAppointments.some(appointment => 
+            checkTimeConflict(appointment.time, time)
+        );
+    } catch (error) {
+        console.error("Error checking appointment conflicts:", error);
+        return false;
+    }
+};
+
 // RESTful: GET /api/appointments
 export const getAllAppointments = async (req, res) => {
     try {
@@ -15,9 +51,21 @@ export const getAllAppointments = async (req, res) => {
 export const addAppointments = async (req, res) => {
     try {
         const { ownerName, petName, petType, service, price, vet, date, time } = req.body;
+        
+        // Validate required fields
         if (!ownerName || !petName || !petType || !service || !price || !vet || !date || !time) {
             return res.status(400).json({ success: false, message: "All fields are required" });
         }
+
+        // Check for conflicting appointments
+        const hasConflict = await hasConflictingAppointment(vet, date, time);
+        if (hasConflict) {
+            return res.status(409).json({ 
+                success: false, 
+                message: `Dr. ${vet} already has an appointment on ${date} that conflicts with the selected time. Each appointment is 1 hour long.`
+            });
+        }
+
         const appointment = await Appointment.create({ ownerName, petName, petType, service, price, vet, date, time });
         return res.status(201).json({ success: true, appointment, message: "Appointment Created" });
     } catch (error) {
@@ -41,7 +89,21 @@ export const getById = async (req, res) => {
 // RESTful: PUT /api/appointments/:id
 export const updateAppointment = async (req, res) => {
     try {
-        const updated = await Appointment.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const appointmentId = req.params.id;
+        const { vet, date, time } = req.body;
+
+        // If updating time-related fields, check for conflicts
+        if (vet && date && time) {
+            const hasConflict = await hasConflictingAppointment(vet, date, time, appointmentId);
+            if (hasConflict) {
+                return res.status(409).json({ 
+                    success: false, 
+                    message: `Dr. ${vet} already has an appointment on ${date} that conflicts with the selected time. Each appointment is 1 hour long.`
+                });
+            }
+        }
+
+        const updated = await Appointment.findByIdAndUpdate(appointmentId, req.body, { new: true });
         if (!updated) return res.status(404).json({ success: false, message: "Unable to update by this ID" });
         return res.status(200).json({ success: true, appointment: updated });
     } catch (error) {
@@ -93,9 +155,26 @@ export const handleAppointmentDeleteController = async (req, res) => {
 
 export const handleAppointmentUpdateController = async (req, res) => {
     try {
-        const { _id, ...rest } = req.body;
+        const { _id, vet, date, time, ...rest } = req.body;
         if (!_id) return res.status(400).json({ message: "Appointment ID is required", success: false });
-        const updated = await Appointment.updateOne({ _id }, { $set: rest });
+
+        // If updating time-related fields, check for conflicts
+        if (vet && date && time) {
+            const hasConflict = await hasConflictingAppointment(vet, date, time, _id);
+            if (hasConflict) {
+                return res.status(409).json({ 
+                    success: false, 
+                    message: `Dr. ${vet} already has an appointment on ${date} that conflicts with the selected time. Each appointment is 1 hour long.`
+                });
+            }
+        }
+
+        const updateData = { ...rest };
+        if (vet) updateData.vet = vet;
+        if (date) updateData.date = date;
+        if (time) updateData.time = time;
+
+        const updated = await Appointment.updateOne({ _id }, { $set: updateData });
         if (updated.matchedCount === 0) return res.status(404).json({ message: "Appointment not found", success: false });
         if (updated.modifiedCount > 0) return res.json({ message: "Appointment updated successfully", success: true });
         return res.json({ message: "No changes made", success: true });

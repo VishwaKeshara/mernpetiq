@@ -100,7 +100,6 @@ function App() {
             <Route path="payments" element={<AdminPayments/>}/>
             <Route path="cards" element={<AdminCards />} />
             <Route path="addresses" element={<AdminAddresses />} />
-
             <Route path="appointments" element={<AppointmentList />} />
             <Route path="medical-records" element={<VetDashboard />} />
           </Route>

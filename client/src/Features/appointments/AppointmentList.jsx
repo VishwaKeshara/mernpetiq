@@ -5,6 +5,7 @@ import { MdDelete } from "react-icons/md";
 import { FaPen, FaSearch, FaCalendarAlt, FaPlus, FaTachometerAlt, FaDownload, FaDollarSign, FaChartLine } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 import { useNavigate, useLocation } from "react-router-dom";
+
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
