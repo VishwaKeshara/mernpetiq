@@ -35,8 +35,8 @@ export default function PaymentPage() {
   const reviewImages = ["/images/vmsp4.webp", "/images/vmsp5.webp", "/images/vmsp6.webp"];
 
   const location = useLocation();
-  const [step, setStep] = useState(() => location.state?.step || "form");
-  const [mode, setMode] = useState(() => new URLSearchParams(location.search).get("mode") || "add"); // "add" | "edit"
+  const [step, setStep] = useState(() => location.state?.step || new URLSearchParams(location.search).get("step") || "form");
+  const [mode, setMode] = useState(() => new URLSearchParams(location.search).get("mode") || "add");
   const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
@@ -51,6 +51,7 @@ export default function PaymentPage() {
     url.searchParams.set("mode", mode);
     window.history.pushState({ step, mode }, "", url.toString());
   }, [step, mode]);
+
   useEffect(() => {
     const onPop = () => {
       const s = new URLSearchParams(window.location.search);
@@ -61,7 +62,7 @@ export default function PaymentPage() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-
+  // Persist incoming query params
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const t = params.get("total");
@@ -74,18 +75,17 @@ export default function PaymentPage() {
     if (r) localStorage.setItem("vms:ref", r);
   }, []);
 
+  // Amount + context (we FORCE USD for charging)
   const { amount, currency, source, ref } = useMemo(() => {
     if (location.state?.amount) {
-      console.log('Using amount from state:', location.state.amount);
       return {
         amount: Number(location.state.amount),
-        currency: location.state.currency || 'usd',
-        source: location.state.source || 'hospital',
+        currency: "USD", // force USD usage now
+        source: location.state.source || "hospital",
         ref: location.state.ref
       };
     }
 
-    
     const params = new URLSearchParams(window.location.search);
     const readNum = (v) => {
       if (v == null) return null;
@@ -94,28 +94,25 @@ export default function PaymentPage() {
     };
 
     const urlTotal = readNum(params.get("total"));
-    const urlCurrency = params.get("currency")?.toUpperCase();
     const lsTotal = readNum(localStorage.getItem("vms:total"));
-    const lsCurrency = localStorage.getItem("vms:currency")?.toUpperCase();
     const amount = urlTotal ?? lsTotal ?? 0;
 
-    let currency = /^[A-Z]{3}$/.test(urlCurrency || "") ? urlCurrency : lsCurrency || "USD";
-    try {
-      new Intl.NumberFormat(undefined, { style: "currency", currency }).format(1);
-    } catch {
-      currency = "USD";
-    }
+    // We no longer trust incoming currency; we always treat charge currency as USD
+    let displayCurrency = "USD";
 
+    const urlPurpose = params.get("purpose");
     const urlSource = params.get("source");
     const urlRef = params.get("ref");
+    const lsPurpose = localStorage.getItem("vms:purpose");
     const lsSource = localStorage.getItem("vms:source");
     const lsRef = localStorage.getItem("vms:ref");
 
-    const source = (urlSource || lsSource || "unknown").toString().trim();
+    const source =
+      (urlPurpose || urlSource || lsPurpose || lsSource || "unknown").toString().trim();
     const ref = (urlRef || lsRef || "").toString().trim() || null;
 
-    return { amount, currency, source, ref };
-  }, []);
+    return { amount, currency: displayCurrency, source, ref };
+  }, [location.state]);
 
   const formattedTotal = useMemo(() => {
     try {
@@ -125,23 +122,21 @@ export default function PaymentPage() {
     }
   }, [amount, currency]);
 
-
   const [cardNumber, setCardNumber] = useState("");
   const [cvv, setCvv] = useState("");
   const [nameOnCard, setNameOnCard] = useState("");
-
 
   const [elStatus, setElStatus] = useState({
     cardNumber: { complete: false, error: "" },
     expiry: { complete: false, error: "" },
     cvv: { complete: false, error: "" },
   });
+
   const handleElChange = (field) => (ev) => {
     setElStatus((s) => ({
       ...s,
       [field]: { complete: ev.complete, error: ev.error?.message || "" },
     }));
-
     if (ev.complete) {
       setErrors((er) => ({ ...er, [field]: null }));
     } else if (ev.error?.message) {
@@ -159,7 +154,7 @@ export default function PaymentPage() {
 
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
-  const [expiryRaw, setExpiryRaw] = useState(""); 
+  const [expiryRaw, setExpiryRaw] = useState("");
   const expiryRef = useRef(null);
   const isDigit = (k) => /^[0-9]$/.test(k);
 
@@ -169,6 +164,7 @@ export default function PaymentPage() {
     const mm = raw.slice(0, 2);
     return raw.length > 2 ? `${mm}/${raw.slice(2, 4)}` : `${mm}/`;
   };
+
   const insertDigit = (raw, d) => {
     if (raw.length >= 4) return raw;
     if (raw.length === 0) {
@@ -191,7 +187,6 @@ export default function PaymentPage() {
     return raw;
   };
 
-  // Expiry validation 
   const isExpiryValid = (mm, yyyy) => {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
@@ -202,43 +197,46 @@ export default function PaymentPage() {
     return true;
   };
 
-  // Function to load saved cards
   const loadCards = async () => {
     try {
-      const { data } = await paymentBaseURL.get('/payment-methods');
-      setSavedCards(data.map(card => ({
-        id: card.pmId || card.id,
-        last4: card.last4,
-        name: card.billing_name || card.billing_details?.name || '',
-        brand: card.brand,
-        expMonth: card.exp_month,
-        expYear: card.exp_year,
-        expiryDisplay: card.exp_month && card.exp_year ? formatDisplayExpiry(card.exp_month, card.exp_year) : '—'
-      })));
+      const { data } = await paymentBaseURL.get("/payment-methods");
+      setSavedCards(
+        data.map((card) => ({
+          id: card.pmId || card.id,
+            last4: card.last4,
+            name: card.billing_name || card.billing_details?.name || "",
+            brand: card.brand,
+            expMonth: card.exp_month,
+            expYear: card.exp_year,
+            expiryDisplay:
+              card.exp_month && card.exp_year
+                ? formatDisplayExpiry(card.exp_month, card.exp_year)
+                : "—",
+        }))
+      );
     } catch (error) {
-      setCardError('Failed to load saved cards');
+      setCardError("Failed to load saved cards");
     }
   };
-
 
   useEffect(() => {
     loadCards();
   }, []);
 
   useEffect(() => {
-  if (expiryRaw.length === 4) {
-    const mm = Number(expiryRaw.slice(0, 2));
-    const yy = Number(expiryRaw.slice(2, 4));
-    const yyyy = 2000 + yy;
-    if (!isExpiryValid(mm, yyyy)) {
-      setErrors(er => ({ ...er, expiry: "Expiry date is in the past." }));
-    } else {
-      setErrors(er => ({ ...er, expiry: null }));
+    if (expiryRaw.length === 4) {
+      const mm = Number(expiryRaw.slice(0, 2));
+      const yy = Number(expiryRaw.slice(2, 4));
+      const yyyy = 2000 + yy;
+      if (!isExpiryValid(mm, yyyy)) {
+        setErrors((er) => ({ ...er, expiry: "Expiry date is in the past." }));
+      } else {
+        setErrors((er) => ({ ...er, expiry: null }));
+      }
+    } else if (errors.expiry) {
+      setErrors((er) => ({ ...er, expiry: null }));
     }
-  } else if (errors.expiry) {
-    setErrors(er => ({ ...er, expiry: null }));
-  }
-}, [expiryRaw]);
+  }, [expiryRaw]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [errors, setErrors] = useState({
     cardNumber: null,
@@ -270,6 +268,7 @@ export default function PaymentPage() {
     }
     e.preventDefault();
   }
+
   function handleExpiryPaste(e) {
     e.preventDefault();
     const txt = (e.clipboardData || window.clipboardData).getData("text") || "";
@@ -314,9 +313,14 @@ export default function PaymentPage() {
     setNameOnCard("");
     setExpiryRaw("");
     setErrors({ cardNumber: null, expiry: null, cvv: null, nameOnCard: null });
-    setElStatus({ cardNumber: { complete: false, error: "" }, expiry: { complete: false, error: "" }, cvv: { complete: false, error: "" }});
+    setElStatus({
+      cardNumber: { complete: false, error: "" },
+      expiry: { complete: false, error: "" },
+      cvv: { complete: false, error: "" },
+    });
     setCardError(null);
   }
+
   function focusCardNumber() {
     setTimeout(() => {
       const iframe = document.querySelector("iframe[name^='__privateStripeFrame']");
@@ -330,7 +334,7 @@ export default function PaymentPage() {
     return `${mm}/${yyyy}`;
   };
 
-  // Slider logic 
+  // Slider logic
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const activeImages =
     step === "form" ? formImages : step === "review" ? reviewImages : [];
@@ -354,6 +358,7 @@ export default function PaymentPage() {
     setStep("form");
     focusCardNumber();
   }
+
   function startEdit(card) {
     setMode("edit");
     setEditingId(card.id);
@@ -370,6 +375,7 @@ export default function PaymentPage() {
       el?.focus();
     }, 0);
   }
+
   async function handleDeleteCard(id) {
     try {
       await paymentBaseURL.delete(`/payment-method/${id}`);
@@ -377,7 +383,7 @@ export default function PaymentPage() {
       setSelectedId((cur) => (cur === id ? null : cur));
       setConfirmDeleteId(null);
     } catch (error) {
-      setCardError(error?.response?.data?.error || 'Failed to delete card');
+      setCardError(error?.response?.data?.error || "Failed to delete card");
     }
   }
 
@@ -393,7 +399,6 @@ export default function PaymentPage() {
     }
 
     if (mode === "add") {
-      // Per-field validation for Elements + name
       const reqErrors = {
         nameOnCard: isNameValid() ? null : "Name on card is required.",
         cardNumber: elStatus.cardNumber.complete
@@ -414,9 +419,7 @@ export default function PaymentPage() {
 
       try {
         setSaving(true);
-
-      
-        const { data: setupData } = await paymentBaseURL.post('/create-setup-intent');
+        const { data: setupData } = await paymentBaseURL.post("/create-setup-intent");
 
         if (!setupData?.clientSecret) {
           throw new Error(setupData?.error || "Couldn't start card save.");
@@ -424,21 +427,24 @@ export default function PaymentPage() {
 
         const numberEl = elements.getElement(CardNumberElement);
 
-        const { error, setupIntent } = await stripe.confirmCardSetup(setupData.clientSecret, {
-          payment_method: {
-            card: numberEl,
-            billing_details: { 
-              name: nameOnCard.trim() 
+        const { error, setupIntent } = await stripe.confirmCardSetup(
+          setupData.clientSecret,
+          {
+            payment_method: {
+              card: numberEl,
+              billing_details: {
+                name: nameOnCard.trim(),
+              },
             },
-          },
-        });
+          }
+        );
 
         if (error) {
-          throw new Error(error.message || 'Card details are invalid');
+          throw new Error(error.message || "Card details are invalid");
         }
 
         if (!setupIntent?.payment_method) {
-          throw new Error('No payment method returned from Stripe');
+          throw new Error("No payment method returned from Stripe");
         }
 
         const pmId = setupIntent.payment_method;
@@ -458,7 +464,10 @@ export default function PaymentPage() {
             brand,
             expMonth,
             expYear,
-            expiryDisplay: expMonth && expYear ? formatDisplayExpiry(expMonth, expYear) : "—",
+            expiryDisplay:
+              expMonth && expYear
+                ? formatDisplayExpiry(expMonth, expYear)
+                : "—",
           },
         ]);
 
@@ -467,7 +476,6 @@ export default function PaymentPage() {
         setEditingId(null);
         resetForm();
         setStep("review");
-
         loadCards();
       } catch (err) {
         setCardError(err?.message || "Something went wrong saving the card.");
@@ -499,7 +507,6 @@ export default function PaymentPage() {
 
     try {
       setSaving(true);
-    
       const { data: updatedCard } = await paymentBaseURL.patch(
         `/payment-method/${editingId}`,
         {
@@ -530,10 +537,11 @@ export default function PaymentPage() {
       setMode("add");
       setEditingId(null);
       resetForm();
-
       loadCards();
     } catch (e) {
-      setCardError(e?.response?.data?.error || e?.message || "Failed to save changes.");
+      setCardError(
+        e?.response?.data?.error || e?.message || "Failed to save changes."
+      );
     } finally {
       setSaving(false);
     }
@@ -586,9 +594,13 @@ export default function PaymentPage() {
     </svg>
   );
 
-  const gridCols = step === "success" ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[2fr_1fr]";
-  const editingCard = mode === "edit" ? savedCards.find((c) => c.id === editingId) : null;
-  const maskedNumber = editingCard ? `${(editingCard.brand || "").toUpperCase()} •••• ${editingCard.last4}` : "";
+  const gridCols =
+    step === "success" ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[2fr_1fr]";
+  const editingCard =
+    mode === "edit" ? savedCards.find((c) => c.id === editingId) : null;
+  const maskedNumber = editingCard
+    ? `${(editingCard.brand || "").toUpperCase()} •••• ${editingCard.last4}`
+    : "";
 
   const [paidAt, setPaidAt] = useState(null);
   const [paidAmount, setPaidAmount] = useState("");
@@ -607,84 +619,156 @@ export default function PaymentPage() {
     }
   };
 
+  // UPDATED: charge in USD
   async function handleUsePayment() {
-     console.log("handleUsePayment called", selectedId);
+    console.log("handleUsePayment called", selectedId);
+    setCardError(null);
+
     if (!selectedId) {
-      setCardError('Please select a payment method');
+      setCardError("Please select a payment method");
       return;
     }
     if (!amount || amount <= 0) {
-      setCardError('Invalid payment amount');
+      setCardError("Invalid payment amount");
       return;
     }
+
+    const raw = Number(amount || 0);
+    if (!Number.isFinite(raw)) {
+      setCardError("Amount is invalid");
+      return;
+    }
+
+    // Convert USD dollars → cents
+    const amountInCents = Math.round(raw * 100);
+
+    // Stripe minimum for USD is $0.50 (50 cents)
+    if (amountInCents < 50) {
+      setCardError("Minimum charge is $0.50 USD.");
+      return;
+    }
+
+    const paymentData = {
+      amount: amountInCents,
+      currency: "usd",
+      payment_method: selectedId,
+      source: source,
+      ref_id: ref || "",
+      description:
+        location.state?.description ||
+        (source === "Mart"
+          ? "Mart purchase payment"
+          : "Hospital appointment payment"),
+    };
+
+    console.log("PAYMENT DATA (USD cents):", paymentData);
+
     try {
-      const amountInCents = Math.round(Number(amount || 0));
-      const paymentData = {
-        amount: amountInCents,
-        currency: 'usd',
-        payment_method: selectedId,
-        source: 'hospital',
-        ref_id: ref || '',
-        description: location.state?.description || 'Hospital appointment payment'
-      };
-      const { data: res } = await paymentBaseURL.post('/create-payment-intent', paymentData);
-      if (res.error) {
-        setCardError(res.error);
+      let { data: paymentRes } = await paymentBaseURL.post(
+        "/create-payment-intent",
+        paymentData
+      );
+
+      if (paymentRes.error) {
+        setCardError(paymentRes.error);
         return;
       }
-      if (res.requiresAction && res.clientSecret) {
+
+      // If extra authentication required (3DS)
+      if (paymentRes.requiresAction && paymentRes.clientSecret) {
         if (!stripe) {
           setCardError("Stripe not ready. Try again.");
           return;
         }
-        const result = await stripe.confirmCardPayment(res.clientSecret);
+        const result = await stripe.confirmCardPayment(
+          paymentRes.clientSecret
+        );
         if (result.error) {
-          setCardError(result.error.message || "Payment authentication failed.");
+          setCardError(
+            result.error.message || "Payment authentication failed."
+          );
           return;
         }
-        const { data: confirmRes } = await paymentBaseURL.post('/create-payment-intent', paymentData);
+
+        // After successful auth you might want to refetch final status (if backend not confirming automatically)
+        const { data: confirmRes } = await paymentBaseURL.post(
+          "/create-payment-intent",
+          paymentData
+        );
         if (!confirmRes.success) {
-          setCardError("Payment failed after confirmation. Please try again.");
+          setCardError(
+            confirmRes.error ||
+              "Payment failed after confirmation. Please try again."
+          );
           return;
         }
-      
-        res = confirmRes;
+        paymentRes = confirmRes;
       }
-      if (!res.success) {
-        setCardError("Payment failed. Please try again.");
+
+      if (!paymentRes.success) {
+        setCardError(
+          paymentRes.message || "Payment failed. Please try again."
+        );
         return;
       }
-      const finalAmount = res.amount ? res.amount / 100 : Number(amount || 0);
+
+      const finalAmountUSD = paymentRes.amount
+        ? paymentRes.amount / 100
+        : raw;
+
       setPaidAt(new Date());
       try {
         setPaidAmount(
-          new Intl.NumberFormat(undefined, { style: "currency", currency }).format(finalAmount)
+          new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+          }).format(finalAmountUSD)
         );
       } catch {
-        setPaidAmount(`$${finalAmount.toFixed(2)}`);
+        setPaidAmount(`$${finalAmountUSD.toFixed(2)}`);
       }
+
       const params = new URLSearchParams(location.search);
-      const appointmentId = params.get('appointmentId');
+      const appointmentId = params.get("appointmentId");
       if (appointmentId) {
         try {
-          await paymentBaseURL.put(`/appointment/${appointmentId}/payment-status`, {
-            paymentIntentId: res.paymentIntentId,
-            paymentStatus: 'completed'
-          });
-        } catch (error) {}
+          await paymentBaseURL.put(
+            `/appointment/${appointmentId}/payment-status`,
+            {
+              paymentIntentId: paymentRes.paymentIntentId,
+              paymentStatus: "completed",
+            }
+          );
+        } catch {
+          /* swallow */
+        }
       }
+
       setStep("success");
     } catch (error) {
-      setCardError(error?.response?.data?.error || error?.message || 'Payment failed. Please try again.');
-      alert("API error: " + JSON.stringify(error?.response?.data || error?.message || error));
+      setCardError(
+        error?.response?.data?.error ||
+          error?.message ||
+          "Payment failed. Please try again."
+      );
+      // You can remove the alert if noisy
+      alert(
+        "API error: " +
+          JSON.stringify(
+            error?.response?.data || error?.message || error
+          )
+      );
     }
   }
 
   return (
     <div className="min-h-screen bg-white">
       <div className={`grid ${gridCols} min-h-screen`}>
-        {/* LEFT */}
-        <div className={`p-8 lg:p-12 flex flex-col ${step === "success" ? "items-center justify-center" : ""}`}>
+        <div
+          className={`p-8 lg:p-12 flex flex-col ${
+            step === "success" ? "items-center justify-center" : ""
+          }`}
+        >
           {step === "form" && (
             <>
               <h2 className="text-2xl font-semibold">
@@ -696,29 +780,43 @@ export default function PaymentPage() {
                   : "Please provide a credit or debit card for future payments. This card will be set as the default payment method for your account."}
               </p>
 
-              {/* form-level Stripe error */}
               {cardError && (
                 <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-red-700">
                   {cardError}
                 </div>
               )}
 
-              <form className="flex flex-col flex-1" noValidate onSubmit={onSubmit}>
+              <form
+                className="flex flex-col flex-1"
+                noValidate
+                onSubmit={onSubmit}
+              >
                 <div className="space-y-6">
-                  {/* Card number */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-800 mb-1">Card number</label>
+                    <label className="block text-sm font-medium text-gray-800 mb-1">
+                      Card number
+                    </label>
                     <div className="relative">
                       {mode === "add" ? (
-                        <div className={inputCls(!!errors.cardNumber) + " flex items-center"}>
+                        <div
+                          className={
+                            inputCls(!!errors.cardNumber) +
+                            " flex items-center"
+                          }
+                        >
                           <div className="w-full py-2">
-                            <CardNumberElement options={elementOptions} onChange={handleElChange("cardNumber")} />
+                            <CardNumberElement
+                              options={elementOptions}
+                              onChange={handleElChange("cardNumber")}
+                            />
                           </div>
                         </div>
                       ) : (
                         <input
                           type="text"
-                          className={`${inputCls(false)} bg-gray-50 cursor-not-allowed`}
+                          className={`${inputCls(
+                            false
+                          )} bg-gray-50 cursor-not-allowed`}
                           value={maskedNumber}
                           disabled
                           readOnly
@@ -728,19 +826,30 @@ export default function PaymentPage() {
                         {IconCardOutline}
                       </div>
                     </div>
-                    {errors.cardNumber && <p className="mt-1 text-sm text-red-600">{errors.cardNumber}</p>}
+                    {errors.cardNumber && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.cardNumber}
+                      </p>
+                    )}
                   </div>
 
-                  {/* Expiry + CVC */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {/* Expiry */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-800 mb-1">Exp MM/YY</label>
+                      <label className="block text-sm font-medium text-gray-800 mb-1">
+                        Exp MM/YY
+                      </label>
                       <div className="relative">
                         {mode === "add" ? (
-                          <div className={inputCls(!!errors.expiry) + " flex items-center"}>
+                          <div
+                            className={
+                              inputCls(!!errors.expiry) + " flex items-center"
+                            }
+                          >
                             <div className="w-full py-2">
-                              <CardExpiryElement options={elementOptions} onChange={handleElChange("expiry")} />
+                              <CardExpiryElement
+                                options={elementOptions}
+                                onChange={handleElChange("expiry")}
+                              />
                             </div>
                           </div>
                         ) : (
@@ -761,24 +870,38 @@ export default function PaymentPage() {
                           {IconCalendarOutline}
                         </div>
                       </div>
-                      {errors.expiry && <p className="mt-1 text-sm text-red-600">{errors.expiry}</p>}
+                      {errors.expiry && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.expiry}
+                        </p>
+                      )}
                     </div>
 
-                    {/* CVC */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-800 mb-1">CVV</label>
+                      <label className="block text-sm font-medium text-gray-800 mb-1">
+                        CVV
+                      </label>
                       <div className="relative">
                         {mode === "add" ? (
-                          <div className={inputCls(!!errors.cvv) + " flex items-center"}>
+                          <div
+                            className={
+                              inputCls(!!errors.cvv) + " flex items-center"
+                            }
+                          >
                             <div className="w-full py-2">
-                              <CardCvcElement options={elementOptions} onChange={handleElChange("cvv")} />
+                              <CardCvcElement
+                                options={elementOptions}
+                                onChange={handleElChange("cvv")}
+                              />
                             </div>
                           </div>
                         ) : (
                           <input
                             type="password"
                             placeholder="•••"
-                            className={`${inputCls(false)} bg-gray-50 cursor-not-allowed`}
+                            className={`${inputCls(
+                              false
+                            )} bg-gray-50 cursor-not-allowed`}
                             value="•••"
                             disabled
                             readOnly
@@ -788,13 +911,18 @@ export default function PaymentPage() {
                           {IconLockOutline}
                         </div>
                       </div>
-                      {errors.cvv && <p className="mt-1 text-sm text-red-600">{errors.cvv}</p>}
+                      {errors.cvv && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.cvv}
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  {/* Name on card */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-800 mb-1">Name on card</label>
+                    <label className="block text-sm font-medium text-gray-800 mb-1">
+                      Name on card
+                    </label>
                     <div className="relative">
                       <input
                         type="text"
@@ -812,11 +940,14 @@ export default function PaymentPage() {
                         {IconIdCardOutline}
                       </div>
                     </div>
-                    {errors.nameOnCard && <p className="mt-1 text-sm text-red-600">{errors.nameOnCard}</p>}
+                    {errors.nameOnCard && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.nameOnCard}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* Buttons */}
                 <div className="flex-1 flex items-center mt-6">
                   <div className="flex gap-4 w-full">
                     <button
@@ -836,7 +967,11 @@ export default function PaymentPage() {
                       disabled={saving}
                       className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-60"
                     >
-                      {saving ? "Saving..." : mode === "edit" ? "Save changes" : "Save and continue"}
+                      {saving
+                        ? "Saving..."
+                        : mode === "edit"
+                        ? "Save changes"
+                        : "Save and continue"}
                     </button>
                   </div>
                 </div>
@@ -854,7 +989,9 @@ export default function PaymentPage() {
               )}
               <div className="mt-6 border rounded-lg border-gray-300">
                 <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold">Your Credit and Debit Cards</h3>
+                  <h3 className="text-lg font-semibold">
+                    Your Credit and Debit Cards
+                  </h3>
                 </div>
                 <div className="px-6 py-3 grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.8fr)] items-center text-sm text-gray-600">
                   <div>Card</div>
@@ -868,7 +1005,9 @@ export default function PaymentPage() {
                       <div
                         key={card.id}
                         className={`rounded-md px-6 py-4 border ${
-                          selected ? "bg-orange-50 border-orange-200" : "bg-white border-gray-200"
+                          selected
+                            ? "bg-orange-50 border-orange-200"
+                            : "bg-white border-gray-200"
                         }`}
                       >
                         <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-4">
@@ -877,9 +1016,13 @@ export default function PaymentPage() {
                               type="button"
                               onClick={() => setSelectedId(card.id)}
                               aria-pressed={selected}
-                              aria-label={selected ? "Unselect card" : "Select card"}
+                              aria-label={
+                                selected ? "Unselect card" : "Select card"
+                              }
                               className={`h-4 w-4 rounded-full border ${
-                                selected ? "border-blue-600" : "border-gray-400"
+                                selected
+                                  ? "border-blue-600"
+                                  : "border-gray-400"
                               } flex items-center justify-center`}
                             >
                               <span
@@ -890,11 +1033,19 @@ export default function PaymentPage() {
                             </button>
                             {IconMiniCardColor}
                             <div className="font-semibold">
-                              {card.brand ? `${card.brand.toUpperCase()} •••• ${card.last4}` : `Card ending in ${card.last4}`}
+                              {card.brand
+                                ? `${card.brand.toUpperCase()} •••• ${
+                                    card.last4
+                                  }`
+                                : `Card ending in ${card.last4}`}
                             </div>
                           </div>
-                          <div className="text-gray-900">{card.name || "—"}</div>
-                          <div className="text-gray-900 text-right">{card.expiryDisplay || "—"}</div>
+                          <div className="text-gray-900">
+                            {card.name || "—"}
+                          </div>
+                          <div className="text-gray-900 text-right">
+                            {card.expiryDisplay || "—"}
+                          </div>
                         </div>
                         <div className="mt-2 flex items-center gap-4 text-sm">
                           <button
@@ -932,9 +1083,15 @@ export default function PaymentPage() {
                       className="w-full text-left rounded-md border border-gray-200 hover:bg-gray-50"
                     >
                       <div className="flex items-center gap-3 px-4 py-3">
-                        <span className="inline-flex items-center justify-center">{IconPlusCircle}</span>
-                        <span className="inline-flex items-center justify-center">{IconMiniCardColor}</span>
-                        <span className="text-blue-600">Add a credit or debit card</span>
+                        <span className="inline-flex items-center justify-center">
+                          {IconPlusCircle}
+                        </span>
+                        <span className="inline-flex items-center justify-center">
+                          {IconMiniCardColor}
+                        </span>
+                        <span className="text-blue-600">
+                          Add a credit or debit card
+                        </span>
                       </div>
                     </button>
                   )}
@@ -946,11 +1103,16 @@ export default function PaymentPage() {
                 disabled={!selectedId}
                 aria-disabled={!selectedId}
                 className={`mt-6 w-full rounded-full font-semibold py-3 ${
-                  selectedId ? "bg-yellow-400 hover:bg-yellow-500 text-black" : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  selectedId
+                    ? "bg-yellow-400 hover:bg-yellow-500 text-black"
+                    : "bg-gray-200 text-gray-500 cursor-not-allowed"
                 }`}
               >
                 Use this payment method
               </button>
+              {cardError && (
+                <p className="mt-4 text-sm text-red-600">{cardError}</p>
+              )}
             </>
           )}
 
@@ -958,8 +1120,12 @@ export default function PaymentPage() {
             <div className="w-full flex items-center justify-center min-h-[70vh]">
               <div className="text-center">
                 {IconSuccessCard}
-                <h1 className="mt-8 text-3xl font-semibold text-gray-900">Thank You!</h1>
-                <p className="mt-3 text-gray-700">Payment done Successfully</p>
+                <h1 className="mt-8 text-3xl font-semibold text-gray-900">
+                  Thank You!
+                </h1>
+                <p className="mt-3 text-gray-700">
+                  Payment completed successfully
+                </p>
                 <div className="mt-6 inline-block text-left border-2 border-gray-400 rounded-xl px-6 py-5 shadow-sm">
                   <div className="grid grid-cols-[auto_1fr] gap-x-10 gap-y-3 min-w-[380px]">
                     <div className="text-gray-700">Amount Paid:</div>
@@ -967,7 +1133,9 @@ export default function PaymentPage() {
                       {paidAmount || formattedTotal}
                     </div>
                     <div className="text-gray-700">Purpose:</div>
-                    <div className="text-right text-gray-900 capitalize">{source}</div>
+                    <div className="text-right text-gray-900 capitalize">
+                      {source}
+                    </div>
                     {ref && (
                       <>
                         <div className="text-gray-700">Reference:</div>
@@ -980,7 +1148,9 @@ export default function PaymentPage() {
                     </div>
                   </div>
                 </div>
-                <p className="mt-4 text-sm text-gray-500">Click the button below to return to the home page.</p>
+                <p className="mt-4 text-sm text-gray-500">
+                  Click the button below to return to the home page.
+                </p>
                 <button
                   type="button"
                   onClick={() => window.location.assign("/")}
@@ -992,7 +1162,7 @@ export default function PaymentPage() {
             </div>
           )}
         </div>
-        {/* RIGHT (Summary + slider) */}
+
         {step !== "success" && (
           <div className="p-8 lg:p-12 border-t lg:border-t-0 lg:border-l border-gray-300">
             <div className="border border-gray-500 rounded-lg p-6">
@@ -1004,7 +1174,9 @@ export default function PaymentPage() {
               <div className="mt-4 text-sm text-gray-600">
                 <div className="flex justify-between">
                   <span>Purpose</span>
-                  <span className="font-medium text-gray-900 capitalize">{source}</span>
+                  <span className="font-medium text-gray-900 capitalize">
+                    {source}
+                  </span>
                 </div>
                 {ref && (
                   <div className="flex justify-between mt-1">
@@ -1036,23 +1208,33 @@ export default function PaymentPage() {
           </div>
         )}
       </div>
-      {/* Delete confirm modal */}
+
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmDeleteId(null)} />
-          <div className="relative z-10 w-[92%] max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setConfirmDeleteId(null)}
+          />
+            <div className="relative z-10 w-[92%] max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
               <svg viewBox="0 0 24 24" className="h-8 w-8 text-red-500">
-                <path d="M9 3h6l1 2h5v2H3V5h5l1-2zM5 9h14l-1 11H6L5 9z" fill="currentColor" />
+                <path
+                  d="M9 3h6l1 2h5v2H3V5h5l1-2zM5 9h14l-1 11H6L5 9z"
+                  fill="currentColor"
+                />
               </svg>
             </div>
-            <h3 className="mt-4 text-2xl font-semibold text-center">Delete Card?</h3>
+            <h3 className="mt-4 text-2xl font-semibold text-center">
+              Delete Card?
+            </h3>
             <p className="mt-2 text-center text-gray-600">
               Are you sure you want to delete your card ending in{" "}
               <span className="font-semibold">
-                {savedCards.find((c) => c.id === confirmDeleteId)?.last4 || "••••"}
+                {savedCards.find((c) => c.id === confirmDeleteId)?.last4 ||
+                  "••••"}
               </span>
-              ? This action will permanently remove the card from your account.
+              ? This action will permanently remove the card from your
+              account.
             </p>
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
