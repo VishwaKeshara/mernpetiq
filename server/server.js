@@ -12,6 +12,7 @@ import productRoutes from './routes/ProductRoute.js';
 import appointmentRouter from './routes/AppointmentRoutes.js';
 import medicalRecordsRouter from './routes/medicalRecords.js';
 import paymentRoutes from './routes/PaymentRoutes.js'; 
+import addressRoutes from './routes/AddressRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -35,6 +36,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/appointments", appointmentRouter);
 app.use('/api/medical-records', medicalRecordsRouter);
 app.use('/api/payment', paymentRoutes);
+app.use('/api', addressRoutes);
 
 
 app.use('/api', (req, res) => {
