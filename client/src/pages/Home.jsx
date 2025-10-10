@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { FaPaw, FaStethoscope, FaCalendarCheck, FaClipboardList, FaShoppingCart, FaArrowRight, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { productBaseURL } from "../axiosinstance";
 import { useNavigate } from "react-router-dom";
@@ -45,11 +44,11 @@ function Home() {
     setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
   };
 
-  // Get current products to display
-  const getCurrentProducts = () => {
-    const startIndex = currentSlide * productsPerSlide;
-    return featuredProducts.slice(startIndex, startIndex + productsPerSlide);
-  };
+  // Get current products to display (currently unused)
+  // const getCurrentProducts = () => {
+  //   const startIndex = currentSlide * productsPerSlide;
+  //   return featuredProducts.slice(startIndex, startIndex + productsPerSlide);
+  // };
 
   // Handle add to cart
   const handleAddToCart = (product) => {
@@ -86,39 +85,27 @@ function Home() {
 
       <section className="relative bg-gradient-to-r from-yellow-100 to-yellow-300 py-24">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between">
-          <motion.div
-            initial={{ x: -100, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 1 }}
-            className="md:w-1/2 mb-12 md:mb-0"
-          >
+          <div className="md:w-1/2 mb-12 md:mb-0">
             <h1 className="text-5xl font-bold text-yellow-900 mb-6">
               Welcome to PetIQ.LK Veterinary System!
             </h1>
             <p className="text-lg text-yellow-800 mb-6">
               Complete management for pets, appointments, medical records, and pet products – all in one place.
             </p>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg"
             >
               Get Started
-            </motion.button>
-          </motion.div>
+            </button>
+          </div>
 
-          <motion.div
-            initial={{ x: 100, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 1 }}
-            className="md:w-1/2"
-          >
+          <div className="md:w-1/2">
             <img
             src="src/assets/pethome.jpg"
             alt="Pets"
             className="rounded-3xl shadow-2xl object-cover w-full h-96"
             />
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -128,15 +115,15 @@ function Home() {
           <h2 className="text-4xl font-bold text-center text-yellow-900 mb-12">Features</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
-              <motion.div
+              <div
                 key={index}
-                whileHover={{ scale: 1.05 }}
+                
                 className="bg-white p-8 rounded-3xl shadow-xl text-center hover:shadow-2xl transition-shadow"
               >
                 <div className="mb-4 flex justify-center">{feature.icon}</div>
                 <h3 className="text-xl font-semibold text-yellow-900 mb-2">{feature.title}</h3>
                 <p className="text-yellow-800">{feature.description}</p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -146,22 +133,22 @@ function Home() {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-8">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
+            <h2
+              
+              
+              
               className="text-3xl font-bold text-yellow-900 mb-3"
             >
               Featured Pet Products
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+            </h2>
+            <p
+              
+              
+              
               className="text-yellow-800 text-base max-w-xl mx-auto"
             >
               Discover our carefully curated selection of high-quality pet products
-            </motion.p>
+            </p>
           </div>
 
           {productsLoading ? (
@@ -172,7 +159,7 @@ function Home() {
             <div className="relative">
               {/* Carousel Container */}
               <div className="overflow-hidden rounded-xl">
-                <motion.div
+                <div
                   className="flex transition-transform duration-500 ease-in-out"
                   style={{ transform: `translateX(-${currentSlide * 100}%)` }}
                 >
@@ -182,11 +169,11 @@ function Home() {
                         {featuredProducts
                           .slice(slideIndex * productsPerSlide, (slideIndex + 1) * productsPerSlide)
                           .map((product, productIndex) => (
-                            <motion.div
+                            <div
                               key={product._id}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.5, delay: productIndex * 0.1 }}
+                              
+                              
+                              
                               className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 group h-[350px] flex flex-col cursor-pointer"
                               onClick={() => navigate(`/product/${product._id}`)}
                             >
@@ -233,9 +220,9 @@ function Home() {
                                     )}
                                   </div>
                                   
-                                  <motion.button
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
+                                  <button
+                                    
+                                    
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleAddToCart(product);
@@ -244,37 +231,37 @@ function Home() {
                                   >
                                     <FaShoppingCart size={12} />
                                     Add to Cart
-                                  </motion.button>
+                                  </button>
                                 </div>
                               </div>
-                            </motion.div>
+                            </div>
                         ))}
                       </div>
                     </div>
                   ))}
-                </motion.div>
+                </div>
               </div>
 
               {/* Navigation Buttons */}
               {totalSlides > 1 && (
                 <>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                  <button
+                    
+                    
                     onClick={prevSlide}
                     className="absolute left-[-60px] top-[200px] -translate-y-1/2 bg-white hover:bg-yellow-50 text-gray-600 hover:text-yellow-600 p-4 rounded-full shadow-lg border border-gray-200 hover:border-yellow-300 z-10 transition-all duration-200"
                   >
                     <FaChevronLeft size={20} />
-                  </motion.button>
+                  </button>
                   
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                  <button
+                    
+                    
                     onClick={nextSlide}
                     className="absolute right-[-60px] top-[200px] -translate-y-1/2 bg-white hover:bg-yellow-50 text-gray-600 hover:text-yellow-600 p-4 rounded-full shadow-lg border border-gray-200 hover:border-yellow-300 z-10 transition-all duration-200"
                   >
                     <FaChevronRight size={20} />
-                  </motion.button>
+                  </button>
                 </>
               )}
 
@@ -282,9 +269,9 @@ function Home() {
               {totalSlides > 1 && (
                 <div className="flex justify-center mt-6 gap-2">
                   {Array.from({ length: totalSlides }).map((_, index) => (
-                    <motion.button
+                    <button
                       key={index}
-                      whileHover={{ scale: 1.2 }}
+                      
                       onClick={() => setCurrentSlide(index)}
                       className={`w-2 h-2 rounded-full transition-all duration-200 ${
                         currentSlide === index
@@ -297,72 +284,72 @@ function Home() {
               )}
 
               {/* View All Products Button */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
+              <div
+                
+                
+                
                 className="text-center mt-8"
               >
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <button
+                  
+                  
                   onClick={() => navigate("/products")}
                   className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition-all duration-300 flex items-center gap-2 mx-auto"
                 >
                   View All Products
                   <FaArrowRight size={14} />
-                </motion.button>
-              </motion.div>
+                </button>
+              </div>
             </div>
           ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
+            <div
+              
+              
               className="text-center py-16"
             >
               <FaShoppingCart className="text-6xl text-gray-300 mb-4 mx-auto" />
               <h3 className="text-2xl font-semibold text-gray-600 mb-2">No Products Available</h3>
               <p className="text-gray-500">Products will appear here once the admin adds them!</p>
-            </motion.div>
+            </div>
           )}
         </div>
       </section>
 
       <section className="py-24 bg-yellow-100 relative overflow-hidden">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 1 }}
+        <div
+          
+          
+          
           className="max-w-3xl mx-auto text-center"
         >
           <h2 className="text-4xl font-bold text-yellow-900 mb-6">Manage Your Pets Efficiently</h2>
           <p className="text-yellow-800 mb-6">
             From medical records to appointments and payments, PetCare keeps everything in one place.
           </p>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
+          <button
+            
+            
             className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg"
           >
             Explore Dashboard
-          </motion.button>
-        </motion.div>
+          </button>
+        </div>
 
   
-        <motion.div
-          animate={{ y: [0, 20, 0] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        <div
+          
+          
           className="absolute top-10 left-10 text-yellow-400 text-5xl"
         >
           🐾
-        </motion.div>
-        <motion.div
-          animate={{ y: [0, -20, 0] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        </div>
+        <div
+          
+          
           className="absolute bottom-10 right-10 text-yellow-400 text-6xl"
         >
           🐾
-        </motion.div>
+        </div>
       </section>
     </div>
   );

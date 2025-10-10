@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
 import {
   FaHome,
   FaUsers,
@@ -11,57 +10,110 @@ import {
   FaBoxOpen,
   FaAngleLeft,
   FaAngleRight,
+  FaUserPlus,
+  FaUser,
+  FaCreditCard,
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
-import { useSidebar } from "../context/SidebarContext";
+import { useAuth } from "../context/AuthContext";
 
-// Sidebar links configuration
 const links = [
   { name: "Dashboard", icon: <FaHome />, path: "/admin/dashboard" },
+  { name: "Profile", icon: <FaUser />, path: "/admin/profile" },
   { name: "Employees", icon: <FaUsers />, path: "/admin/userlist" },
-  { name: "Appointments", icon: <FaCalendarAlt />, path: "/admin/appointments" },
+  { name: "Pet Owners", icon: <FaUserPlus />, path: "/admin/registered-users" },
+  { name: "Appointment", icon: <FaCalendarAlt />, path: "/admin/appointments" },
   { name: "Medical Records", icon: <FaFileMedical />, path: "/admin/medical-records" },
-  { name: "Pet Products", icon: <FaBoxOpen />, path: "/admin/products" },
   { name: "Payments", icon: <FaDollarSign />, path: "/admin/payments" },
+  { name: "Products", icon: <FaBoxOpen />, path: "/admin/products" },
 ];
 
 const Sidebar = () => {
-  const { isOpen, toggleSidebar } = useSidebar();
+  const [isOpen, setIsOpen] = useState(true);
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/adminlogin";
+  };
 
   return (
     <div className="flex">
    
-      <motion.div
-        animate={{ width: isOpen ? 250 : 60 }}
-        className="bg-amber-500 h-screen p-5 text-white fixed left-0 top-0 duration-300 z-40 overflow-y-auto"
+      <div
+        className={`bg-amber-500 h-screen p-5 text-white relative duration-300 flex flex-col ${
+          isOpen ? "w-64" : "w-16"
+        }`}
       >
    
         <button
           className="absolute top-4 right-[-12px] bg-amber-700 w-7 h-7 flex items-center justify-center rounded-full"
-          onClick={toggleSidebar}
+          onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? <FaAngleLeft /> : <FaAngleRight />}
         </button>
 
    
         <div className={`text-2xl font-bold mb-8 ${!isOpen && "text-center"}`}>
-          {isOpen ? "PetIQ" : "PQ"}
+          {isOpen ? "PetCare" : "PC"}
         </div>
 
+        {/* User Profile Section */}
+        {user && (
+          <div className={`mb-6 p-3 bg-amber-600 rounded-lg ${!isOpen && "flex justify-center"}`}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
+                {user.avatarUrl ? (
+                  <img 
+                    src={`http://localhost:3000${user.avatarUrl}`} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <FaUser className="text-amber-600 text-lg" />
+                )}
+              </div>
+              {isOpen && (
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">{user.name}</p>
+                  <p className="text-xs text-amber-200 capitalize">{user.role}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
  
-        <ul className="space-y-3 mt-12">
+        <ul className="flex-1">
           {links.map((link, index) => (
             <NavLink
               key={index}
               to={link.path}
-              className="flex items-center gap-4 p-3 rounded-md hover:bg-blue-500 transition-colors"
+              className={({ isActive }) =>
+                `flex items-center gap-4 p-3 rounded-md my-2 transition-colors ${
+                  isActive 
+                    ? "bg-amber-600 text-white" 
+                    : "hover:bg-amber-600 hover:text-white text-amber-100"
+                }`
+              }
             >
               <span className="text-xl">{link.icon}</span>
               {isOpen && <span>{link.name}</span>}
             </NavLink>
           ))}
         </ul>
-      </motion.div>
+
+        {/* Logout Button */}
+        <div className="mt-auto">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-4 p-3 rounded-md hover:bg-red-500 w-full transition-colors text-amber-100 hover:text-white"
+          >
+            <span className="text-xl"><FaSignOutAlt /></span>
+            {isOpen && <span>Logout</span>}
+          </button>
+        </div>
+      </div>
 
 
     </div>

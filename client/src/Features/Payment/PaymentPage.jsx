@@ -130,8 +130,8 @@ export default function PaymentPage() {
   }, [amount, currency]);
 
   
-  const [cardNumber, setCardNumber] = useState("");
-  const [cvv, setCvv] = useState("");
+  // const [cardNumber, setCardNumber] = useState("");
+  // const [cvv, setCvv] = useState("");
   const [nameOnCard, setNameOnCard] = useState("");
 
   
@@ -243,15 +243,15 @@ export default function PaymentPage() {
 
   const isNameValid = () => nameOnCard.trim().length > 0;
 
-  function handleCardNumberChange(e) {
-    let v = e.target.value.replace(/\D/g, "").slice(0, 19);
-    v = v.replace(/(\d{4})(?=\d)/g, "$1 ");
-    setCardNumber(v);
-  }
-  function handleCvvChange(e) {
-    const v = e.target.value.replace(/\D/g, "").slice(0, 4);
-    setCvv(v);
-  }
+  // function handleCardNumberChange(e) {
+  //   let v = e.target.value.replace(/\D/g, "").slice(0, 19);
+  //   v = v.replace(/(\d{4})(?=\d)/g, "$1 ");
+  //   setCardNumber(v);
+  // }
+  // function handleCvvChange(e) {
+  //   const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+  //   setCvv(v);
+  // }
   function handleNameOnCardChange(e) {
     const v = e.target.value.replace(/\d/g, "");
     setNameOnCard(v);
@@ -264,8 +264,8 @@ export default function PaymentPage() {
   }
 
   function resetForm() {
-    setCardNumber("");
-    setCvv("");
+    // setCardNumber("");
+    // setCvv("");
     setNameOnCard("");
     setExpiryRaw("");
     setErrors({ cardNumber: null, expiry: null, cvv: null, nameOnCard: null });
@@ -324,8 +324,8 @@ export default function PaymentPage() {
     const mm = card.expMonth ? String(card.expMonth).padStart(2, "0") : "";
     const yy = card.expYear ? String(card.expYear).slice(-2) : "";
     setExpiryRaw(`${mm}${yy}`.slice(0, 4));
-    setCardNumber("");
-    setCvv("");
+    // setCardNumber("");
+    // setCvv("");
     setErrors({ cardNumber: null, expiry: null, cvv: null, nameOnCard: null });
     setStep("form");
     setTimeout(() => {
@@ -335,7 +335,7 @@ export default function PaymentPage() {
   }
   async function handleDeleteCard(id) {
     try {
-      const res = await paymentBaseURL.delete(`/payment-method/${id}`);
+      await paymentBaseURL.delete(`/payment-method/${id}`);
       await loadCards();
       setSelectedId((cur) => (cur === id ? null : cur));
       setConfirmDeleteId(null);

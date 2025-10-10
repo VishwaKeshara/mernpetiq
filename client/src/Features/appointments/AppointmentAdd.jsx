@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { appointmentBaseURL } from "../../axiosinstance.js";
 import { FaCalendarAlt, FaClock, FaUser, FaPaw, FaStethoscope, FaDollarSign, FaUserMd, FaSave, FaTimes, FaExclamationTriangle } from "react-icons/fa";
@@ -289,34 +288,34 @@ function AppointmentAdd() {
   };
 
   return (
-    <motion.div
+    <div
       className={`${isAdminView 
         ? "w-full" 
         : "w-full min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50/30 to-purple-50 flex justify-center items-center px-4 py-8"
       }`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.6 }}
+      
+      
+      
     >
-      <motion.div
+      <div
         className={`${isAdminView 
           ? "w-full bg-white shadow-lg rounded-xl border border-gray-200" 
           : "w-full max-w-4xl bg-white shadow-2xl rounded-2xl border border-indigo-100"
         } overflow-hidden`}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        
+        
+        
       >
         {/* Header Section */}
         <div className={`${isAdminView 
           ? "bg-gradient-to-r from-blue-600 to-indigo-600 p-6" 
           : "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-8"
         }`}>
-          <motion.div
+          <div
             className="flex items-center justify-between"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
+            
+            
+            
           >
             <div className="flex items-center space-x-3">
               <div className="bg-white/20 p-3 rounded-full">
@@ -342,33 +341,33 @@ function AppointmentAdd() {
                 <FaTimes className="text-white" />
               </button>
             )}
-          </motion.div>
+          </div>
         </div>
 
         {/* Form Section */}
         <div className={`${isAdminView ? "p-6" : "p-8"}`}>
           {/* Error Display */}
           {errors.submit && (
-            <motion.div
+            <div
               className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
+              
+              
             >
               <FaExclamationTriangle className="text-red-500" />
               <span className="text-red-700">{errors.submit}</span>
-            </motion.div>
+            </div>
           )}
 
           {/* Conflict Warning */}
           {conflictWarning && (
-            <motion.div
+            <div
               className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center space-x-2"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
+              
+              
             >
               <FaExclamationTriangle className="text-amber-500" />
               <span className="text-amber-700">{conflictWarning}</span>
-            </motion.div>
+            </div>
           )}
 
           <form className="space-y-6">
@@ -633,24 +632,24 @@ function AppointmentAdd() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
-              <motion.button
+              <button
                 type="button"
                 onClick={handleCancel}
                 className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                
+                
               >
                 <FaTimes />
                 <span>Cancel</span>
-              </motion.button>
+              </button>
               
-              <motion.button
+              <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
                 className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
-                whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
+                
+                
               >
                 <FaSave />
                 <span>
@@ -661,12 +660,12 @@ function AppointmentAdd() {
                     : "Book Appointment"
                   }
                 </span>
-              </motion.button>
+              </button>
             </div>
           </form>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 

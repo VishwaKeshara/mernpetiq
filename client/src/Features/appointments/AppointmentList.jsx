@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { appointmentBaseURL } from "../../axiosinstance.js";
 import { MdDelete } from "react-icons/md";
 import { FaPen, FaSearch, FaCalendarAlt, FaPlus, FaTachometerAlt, FaDownload, FaDollarSign, FaChartLine } from "react-icons/fa";
@@ -37,7 +36,7 @@ function AppointmentList() {
       let data;
       try {
         ({ data } = await appointmentBaseURL.get("/"));
-      } catch (_) {
+      } catch {
         ({ data } = await appointmentBaseURL.get("/appointmentList"));
       }
       const items = data?.appointmentList ?? data?.appointments ?? [];
@@ -213,45 +212,45 @@ function AppointmentList() {
   }
 
   return (
-    <motion.div
+    <div
       className="w-full min-h-screen bg-gradient-to-br from-gray-50 via-amber-50/30 to-gray-50 px-5 py-6"
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      
+      
+      
     >
       {/* Header */}
       <div className="mb-8">
-        <motion.h2
+        <h2
           className="text-3xl font-bold text-gray-800 mb-2"
-          initial={{ opacity: 0, x: -8 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
+          
+          
+          
         >
           Appointments Details
-        </motion.h2>
-        <motion.p
+        </h2>
+        <p
           className="text-gray-600"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
+          
+          
+          
         >
           Manage and track all pet appointments
-        </motion.p>
+        </p>
       </div>
 
       {/* Statistics Cards - Only show in admin view */}
       {isAdminView && (
-        <motion.div 
+        <div 
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
+          
+          
+          
         >
           {/* Total Appointments Card */}
-          <motion.div
+          <div
             className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg"
-            whileHover={{ scale: 1.02, y: -4 }}
-            transition={{ duration: 0.2 }}
+            
+            
           >
             <div className="flex items-center justify-between">
               <div>
@@ -267,13 +266,13 @@ function AppointmentList() {
                 <FaCalendarAlt className="text-2xl" />
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Total Income Card */}
-          <motion.div
+          <div
             className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white shadow-lg"
-            whileHover={{ scale: 1.02, y: -4 }}
-            transition={{ duration: 0.2 }}
+            
+            
           >
             <div className="flex items-center justify-between">
               <div>
@@ -291,16 +290,16 @@ function AppointmentList() {
                 <FaDollarSign className="text-2xl" />
               </div>
             </div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       )}
 
       {/* Search Bar and Action Buttons */}
-      <motion.div 
+      <div 
         className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        
+        
+        
       >
         {/* Search Bar */}
         <div className="w-full md:flex-1 md:max-w-lg">
@@ -337,33 +336,33 @@ function AppointmentList() {
         {/* Action Buttons */}
         <div className="flex items-center gap-3 w-full md:w-auto">
           {isAdminView && (
-            <motion.button
+            <button
               onClick={handleDownloadPDF}
               className="flex-1 md:flex-none bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.98 }}
+              
+              
             >
               <FaDownload className="text-lg" />
               Download PDF
-            </motion.button>
+            </button>
           )}
-          <motion.button
+          <button
             onClick={() => navigate("/appointmentAdd")}
             className="flex-1 md:flex-none bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.98 }}
+            
+            
           >
             <FaPlus className="text-lg" />
             Add Appointment
-          </motion.button>
+          </button>
         </div>
-      </motion.div>
+      </div>
 
-      <motion.div 
+      <div 
         className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100" 
-        initial={{ opacity: 0 }} 
-        animate={{ opacity: 1 }} 
-        transition={{ delay: 0.4 }}
+         
+         
+        
       >
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -378,7 +377,7 @@ function AppointmentList() {
                 <th className="px-6 py-4 text-center text-sm font-bold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <motion.tbody
+            <tbody
               className="bg-white divide-y divide-gray-200"
               initial="hidden"
               animate="show"
@@ -401,10 +400,9 @@ function AppointmentList() {
                 </tr>
               )}
               {filteredAppointments?.map((appointment, index) => (
-                <motion.tr
+                <tr
                   key={appointment._id || index}
                   className="hover:bg-amber-50/50 transition-colors duration-150"
-                  variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
                 >
                   <td className="px-6 py-4">
                     <div className="text-sm font-semibold text-gray-900">{appointment.ownerName}</div>
@@ -436,33 +434,33 @@ function AppointmentList() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2 justify-center">
-                      <motion.button
+                      <button
                         className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
                         onClick={() => handleUpdate(appointment)}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        
+                        
                       >
                         <FaPen className="text-xs" />
                         Edit
-                      </motion.button>
-                      <motion.button
+                      </button>
+                      <button
                         className="inline-flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
                         onClick={() => handleDelete(appointment._id)}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        
+                        
                       >
                         <MdDelete className="text-sm" />
                         Delete
-                      </motion.button>
+                      </button>
                     </div>
                   </td>
-                </motion.tr>
+                </tr>
               ))}
-            </motion.tbody>
+            </tbody>
           </table>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 

@@ -1,21 +1,24 @@
-import { useState } from "react";
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
-import { SidebarProvider, useSidebar } from "./context/SidebarContext";
 
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";      
 import Home from "./pages/Home";
-import Profile from "./pages/profile";
+import Profile from "./pages/Profile";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Sidebar from "./components/Sidebar";
 import Cart from "./components/Cart";
 import Employees from "./admin/Employees";
+import ProfileManagement from "./admin/ProfileManagement";
+import RegisteredUsers from "./admin/RegisteredUsers";
+import Adminlogin from "./admin/Adminlogin";
+import Adminregister from "./admin/Adminregister";
 
 import { Outlet } from "react-router-dom";
 import Dashboard from "./admin/Dashboard";
@@ -36,22 +39,21 @@ import VetDashboard from "./Features/medicalRecords/vetDashboard";
 
 
 const AdminLayout = () => {
-  const { isOpen } = useSidebar();
-  
   return (
-    <div style={{ minHeight: "100vh" }}>
+    <div className="flex min-h-screen">
       <Sidebar />
-      <div style={{ 
-        marginLeft: isOpen ? "250px" : "60px", 
-        padding: "20px", 
-        backgroundColor: "#f8f9fa",
-        minHeight: "100vh",
-        transition: "margin-left 0.3s ease"
-      }}>
+      <div className="flex-1 bg-gray-50 p-6">
         <Outlet />
       </div>
     </div>
   );
+};
+
+const ConditionalNavbar = () => {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  
+  return !isAdminRoute ? <Navbar /> : null;
 };
 
 const ConditionalFooter = () => {
@@ -61,15 +63,20 @@ const ConditionalFooter = () => {
   return !isAdminRoute ? <Footer /> : null;
 };
 
+const ConditionalCart = () => {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  
+  return !isAdminRoute ? <Cart /> : null;
+};
+
 function App() {
-  const [count, setCount] = useState(0);
 
   return (
     <AuthProvider>
       <CartProvider>
-        <SidebarProvider>
-          <Router>
-            <Navbar />
+        <Router>
+            <ConditionalNavbar />
             <Routes>
           
           <Route path="/" element={<Home />} />
@@ -78,7 +85,11 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/profile" element={ <Profile />} />
           
-          <Route path="/services"element={<Services />} />
+          {/* Admin Authentication Routes */}
+          <Route path="/adminlogin" element={<Adminlogin />} />
+          <Route path="/adminregister" element={<Adminregister />} />
+          
+          <Route path="/services" element={<Services />} />
           <Route path="/products" element={<AllProducts />} />
           <Route path="/product/:id" element={<ProductProfile />} />
           <Route path="/checkout" element={<Checkout />} />
@@ -92,17 +103,18 @@ function App() {
 
 
           <Route path="/admin" element={<AdminLayout />}>
-            <Route path="userlist" element={<Employees />} />
             <Route path="dashboard" element={<Dashboard />} />
-            <Route path="products" element={<ProductDashboard />} />
-            <Route path="products/list" element={<ProductList />} />
-            <Route path="products/add" element={<ProductAdd />} />
+            <Route path="profile" element={<ProfileManagement />} />
+            <Route path="userlist" element={<Employees />} />
+            <Route path="registered-users" element={<RegisteredUsers />} />
+            <Route path="appointments" element={<AppointmentList />} />
+            <Route path="medical-records" element={<VetDashboard />} />
             <Route path="payments" element={<AdminPayments/>}/>
             <Route path="cards" element={<AdminCards />} />
             <Route path="addresses" element={<AdminAddresses />} />
-
-            <Route path="appointments" element={<AppointmentList />} />
-            <Route path="medical-records" element={<VetDashboard />} />
+            <Route path="products" element={<ProductDashboard />} />
+            <Route path="products/list" element={<ProductList />} />
+            <Route path="products/add" element={<ProductAdd />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -116,10 +128,9 @@ function App() {
 
         </Routes>
         <ConditionalFooter />
-        <Cart />
+        <ConditionalCart />
       </Router>
         <ToastContainer position="top-right" autoClose={3000} />
-        </SidebarProvider>
       </CartProvider>
     </AuthProvider>
   );

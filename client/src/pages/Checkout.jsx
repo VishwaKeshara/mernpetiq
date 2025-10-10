@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { FaArrowLeft, FaShoppingCart, FaCreditCard, FaUser, FaMapMarkerAlt, FaPhone } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 
 function Checkout() {
   const navigate = useNavigate();
-  const { cartItems, getCartTotals, clearCart } = useCart();
+  const { cartItems, getCartTotals } = useCart();
   const { totalItems, totalPrice } = getCartTotals();
 
   const [formData, setFormData] = useState({
@@ -89,22 +88,22 @@ function Checkout() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
         {/* Back Button */}
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+        <button
+          
+          
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-gray-600 hover:text-yellow-600 mb-6 font-medium transition-colors duration-200"
         >
           <FaArrowLeft />
           Back to Cart
-        </motion.button>
+        </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Checkout Form */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
+          <div
+            
+            
+            
             className="bg-white rounded-2xl shadow-lg p-6"
           >
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
@@ -233,23 +232,23 @@ function Checkout() {
               </div>
 
               {/* Submit Button */}
-              <motion.button
+              <button
                 type="submit"
                 disabled={isSubmitting}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                
+                
                 className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-6 py-4 rounded-xl font-bold text-lg shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Processing...' : `Place Order - Rs. ${totalPrice.toLocaleString()}`}
-              </motion.button>
+              </button>
             </form>
-          </motion.div>
+          </div>
 
           {/* Order Summary */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
+          <div
+            
+            
+            
             className="bg-white rounded-2xl shadow-lg p-6 h-fit"
           >
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
@@ -292,7 +291,7 @@ function Checkout() {
               </div>
               <p className="text-sm text-gray-600 mt-2">Including all taxes and fees</p>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function MedicalRecordForm({ onSubmit, initial = {}, onCancel, ownersList = [] }) {
+export default function MedicalRecordForm({ onSubmit, initial = {}, onCancel }) {
   const [form, setForm] = useState({
     _id: initial._id || null,
     ownerEmail: initial.ownerEmail || '',
