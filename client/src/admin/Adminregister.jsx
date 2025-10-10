@@ -1,0 +1,235 @@
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import axios from "axios";
+import { useAuth } from "../context/AuthContext";
+
+const AdminRegister = () => {
+  const { login } = useAuth();
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+    specialization: "",
+    shift: "",
+    role: "admin",
+  });
+
+  const [err, setErr] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const onChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!form.name || !form.email || !form.password) {
+      setErr("Please fill in all required fields");
+      return;
+    }
+
+    if (form.role === "receptionist" && !form.phone) {
+      setErr("Phone number is required for Receptionist");
+      return;
+    }
+    if (form.role === "veterinarian" && !form.specialization) {
+      setErr("Specialization is required for Veterinarian");
+      return;
+    }
+    if (form.role === "nurse" && !form.shift) {
+      setErr("Shift is required for Nurse");
+      return;
+    }
+
+    setErr(null);
+    setSuccess(null);
+    setLoading(true);
+
+    try {
+      // Save admin data to Employee collection (for staff)
+      const response = await axios.post('http://localhost:3000/api/admin/register', {
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        role: form.role
+      });
+
+      if (response.data.success) {
+        setSuccess(`Admin registered successfully! Welcome ${response.data.data.name}`);
+        console.log("Data saved to Employee collection:", response.data.data);
+        
+        // Login the user with the token
+        login(response.data.data, response.data.data.token);
+        
+        // Reset form after successful registration
+        setForm({
+          name: "",
+          email: "",
+          password: "",
+          phone: "",
+          specialization: "",
+          shift: "",
+          role: "receptionist",
+        });
+      }
+    } catch (error) {
+      console.error("Error registering admin:", error);
+      if (error.response && error.response.data) {
+        setErr(error.response.data.message || "Failed to register admin");
+      } else {
+        setErr("Network error. Please check your connection.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex justify-center items-center min-h-screen bg-gradient-to-r from-yellow-200 via-yellow-300 to-yellow-400">
+      <motion.div
+        initial={{ opacity: 0, y: -50, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="bg-white shadow-2xl rounded-3xl p-10 w-full max-w-lg"
+      >
+        <motion.h2
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-4xl font-extrabold text-center text-gray-800 mb-6"
+        >
+          Create Account
+        </motion.h2>
+
+        {err && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-red-100 text-red-600 p-3 rounded mb-4 text-center font-medium"
+          >
+            {err}
+          </motion.div>
+        )}
+
+        {success && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-green-100 text-green-600 p-3 rounded mb-4 text-center font-medium"
+          >
+            {success}
+          </motion.div>
+        )}
+
+        <form onSubmit={onSubmit} className="space-y-5">
+          {/* Name */}
+          <motion.input
+            whileFocus={{ scale: 1.02 }}
+            type="text"
+            name="name"
+            placeholder="Full Name"
+            value={form.name}
+            onChange={onChange}
+            className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none shadow-sm"
+          />
+
+          {/* Email */}
+          <motion.input
+            whileFocus={{ scale: 1.02 }}
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={onChange}
+            className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none shadow-sm"
+          />
+
+          {/* Password */}
+          <motion.input
+            whileFocus={{ scale: 1.02 }}
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={onChange}
+            className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none shadow-sm"
+          />
+
+          {/* Role Select */}
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">Role</label>
+            <motion.select
+              whileFocus={{ scale: 1.02 }}
+              name="role"
+              value={form.role}
+              onChange={onChange}
+              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none shadow-sm"
+            >
+            <option value="admin">Admin</option>
+              <option value="receptionist">Receptionist</option>
+              <option value="veterinarian">Veterinarian</option>
+              <option value="nurse">Nurse</option>
+            </motion.select>
+          </div>
+
+          {/* Conditional Fields */}
+          {form.role === "receptionist" && (
+            <motion.input
+              whileFocus={{ scale: 1.02 }}
+              type="text"
+              name="phone"
+              placeholder="Phone Number"
+              value={form.phone}
+              onChange={onChange}
+              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none shadow-sm"
+            />
+          )}
+
+          {form.role === "veterinarian" && (
+            <motion.input
+              whileFocus={{ scale: 1.02 }}
+              type="text"
+              name="specialization"
+              placeholder="Specialization (Ex: Surgery)"
+              value={form.specialization}
+              onChange={onChange}
+              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none shadow-sm"
+            />
+          )}
+
+          {form.role === "nurse" && (
+            <motion.input
+              whileFocus={{ scale: 1.02 }}
+              type="text"
+              name="shift"
+              placeholder="Shift (Morning/Evening)"
+              value={form.shift}
+              onChange={onChange}
+              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-400 focus:outline-none shadow-sm"
+            />
+          )}
+
+          {/* Submit */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.97 }}
+            type="submit"
+            disabled={loading}
+            className={`w-full py-3 rounded-xl font-semibold shadow-lg transition ${
+              loading 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:opacity-90'
+            } text-white`}
+          >
+            {loading ? 'Registering...' : 'Register'}
+          </motion.button>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
+export default AdminRegister;

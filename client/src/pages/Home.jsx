@@ -1,9 +1,17 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { FaPaw, FaStethoscope, FaCalendarCheck, FaClipboardList } from "react-icons/fa";
+import pethomeImage from "../assets/pethome.jpg";
 
 
 function Home() {
+  const navigate = useNavigate();
+
+  const handlePetProfileClick = () => {
+    navigate('/pet-profile');
+  };
+
   const features = [
     {
       icon: <FaPaw size={40} className="text-yellow-500" />,
@@ -39,7 +47,7 @@ function Home() {
             className="md:w-1/2 mb-12 md:mb-0"
           >
             <h1 className="text-5xl font-bold text-yellow-900 mb-6">
-              Welcome to PetIQ.LK Veterinary System!
+              Welcome to PetCare Veterinary System
             </h1>
             <p className="text-lg text-yellow-800 mb-6">
               Complete management for pets, appointments, medical records, and pet products – all in one place.
@@ -60,7 +68,7 @@ function Home() {
             className="md:w-1/2"
           >
             <img
-            src="src/assets/pethome.jpg"
+            src={pethomeImage}
             alt="Pets"
             className="rounded-3xl shadow-2xl object-cover w-full h-96"
             />
@@ -77,11 +85,23 @@ function Home() {
               <motion.div
                 key={index}
                 whileHover={{ scale: 1.05 }}
-                className="bg-white p-8 rounded-3xl shadow-xl text-center hover:shadow-2xl transition-shadow"
+                className={`bg-white p-8 rounded-3xl shadow-xl text-center hover:shadow-2xl transition-shadow ${
+                  feature.title === "Pet Profiles" ? "cursor-pointer" : ""
+                }`}
+                onClick={feature.title === "Pet Profiles" ? handlePetProfileClick : undefined}
               >
                 <div className="mb-4 flex justify-center">{feature.icon}</div>
                 <h3 className="text-xl font-semibold text-yellow-900 mb-2">{feature.title}</h3>
                 <p className="text-yellow-800">{feature.description}</p>
+                {feature.title === "Pet Profiles" && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="mt-4 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg"
+                  >
+                    Manage Pet Profiles
+                  </motion.button>
+                )}
               </motion.div>
             ))}
           </div>

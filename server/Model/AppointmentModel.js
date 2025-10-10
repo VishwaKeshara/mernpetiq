@@ -1,7 +1,6 @@
-const mongoose = require("mongoose");
+import mongoose from 'mongoose';
 
 const appointmentSchema = new mongoose.Schema({
-
   ownerName: { type: String, required: true },
   petName: { type: String, required: true },
   petType: { type: String, required: true },
@@ -11,7 +10,6 @@ const appointmentSchema = new mongoose.Schema({
   date: { type: String, required: true },
   time: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
-  
 });
 
-module.exports = mongoose.model("Appointment", appointmentSchema);
+export default mongoose.model("Appointment", appointmentSchema);

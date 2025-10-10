@@ -11,12 +11,18 @@ import {
   FaBoxOpen,
   FaAngleLeft,
   FaAngleRight,
+  FaUserPlus,
+  FaUser,
+  FaCreditCard,
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const links = [
-  { name: "Dashboard", icon: <FaHome />, path: "/admin/Dashboard" },
-  { name: "Employees", icon: <FaUsers />, path: "/admin/UserList" },
+  { name: "Dashboard", icon: <FaHome />, path: "/admin/dashboard" },
+  { name: "Profile", icon: <FaUser />, path: "/admin/profile" },
+  { name: "Employees", icon: <FaUsers />, path: "/admin/userlist" },
+  { name: "Pet Owners", icon: <FaUserPlus />, path: "/admin/registered-users" },
   { name: "Appointment", icon: <FaCalendarAlt />, path: "/admin/appointments" },
   { name: "Medical Records", icon: <FaFileMedical />, path: "/admin/medical-records" },
   { name: "Payments", icon: <FaDollarSign />, path: "/admin/payments" },
@@ -25,13 +31,19 @@ const links = [
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/adminlogin";
+  };
 
   return (
     <div className="flex">
    
       <motion.div
         animate={{ width: isOpen ? 250 : 60 }}
-        className="bg-amber-500 h-screen p-5 text-white relative duration-300"
+        className="bg-amber-500 h-screen p-5 text-white relative duration-300 flex flex-col"
       >
    
         <button
@@ -46,8 +58,33 @@ const Sidebar = () => {
           {isOpen ? "PetCare" : "PC"}
         </div>
 
+        {/* User Profile Section */}
+        {user && (
+          <div className={`mb-6 p-3 bg-amber-600 rounded-lg ${!isOpen && "flex justify-center"}`}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
+                {user.avatarUrl ? (
+                  <img 
+                    src={`http://localhost:3000${user.avatarUrl}`} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <FaUser className="text-amber-600 text-lg" />
+                )}
+              </div>
+              {isOpen && (
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">{user.name}</p>
+                  <p className="text-xs text-amber-200 capitalize">{user.role}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
  
-        <ul>
+        <ul className="flex-1">
           {links.map((link, index) => (
             <NavLink
               key={index}
@@ -59,6 +96,17 @@ const Sidebar = () => {
             </NavLink>
           ))}
         </ul>
+
+        {/* Logout Button */}
+        <div className="mt-auto">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-4 p-2 rounded-md hover:bg-red-500 w-full transition-colors"
+          >
+            <span className="text-xl"><FaSignOutAlt /></span>
+            {isOpen && <span>Logout</span>}
+          </button>
+        </div>
       </motion.div>
 
 

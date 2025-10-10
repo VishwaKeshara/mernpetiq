@@ -1,6 +1,4 @@
-// const express = require("express");
-// const router = express.Router();
-const Appointment = require("../Model/AppointmentModel");
+import Appointment from '../Model/AppointmentModel.js';
 
 const getAllAppointments = async (req, res, next) => {
     let appointments;
@@ -104,8 +102,10 @@ const deleteAppointment = async (req, res, next) => {
 };
 
 //Export all functions  
-exports.getAllAppointments = getAllAppointments;
-exports.addAppointments = addAppointments;
-exports.getById = getById;
-exports.updateAppointment = updateAppointment;
-exports.deleteAppointment = deleteAppointment;
+export {
+    getAllAppointments,
+    addAppointments,
+    getById,
+    updateAppointment,
+    deleteAppointment
+};
