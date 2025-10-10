@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { FaTimes, FaPlus, FaMinus, FaShoppingCart, FaTrash } from 'react-icons/fa';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
@@ -37,21 +37,13 @@ function Cart() {
       {isCartOpen && (
         <>
           {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40"
             onClick={() => setIsCartOpen(false)}
           />
 
           {/* Cart Sidebar */}
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          <div
             className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col"
           >
             {/* Cart Header */}
@@ -79,11 +71,8 @@ function Cart() {
               ) : (
                 <div className="space-y-4">
                   {cartItems.map((item) => (
-                    <motion.div
+                    <div
                       key={item._id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
                       className="flex gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-md transition-shadow duration-200"
                     >
                       {/* Product Image */}
@@ -143,7 +132,7 @@ function Cart() {
                           Rs. {(item.price * item.quantity).toLocaleString()}
                         </p>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -162,14 +151,14 @@ function Cart() {
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <button
+                    
+                    
                     onClick={handleCheckout}
                     className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-6 py-4 rounded-xl font-bold text-lg shadow-lg transition-all duration-200"
                   >
                     Proceed to Checkout
-                  </motion.button>
+                  </button>
 
                   <button
                     onClick={clearCart}
@@ -188,7 +177,7 @@ function Cart() {
                 </button>
               </div>
             )}
-          </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

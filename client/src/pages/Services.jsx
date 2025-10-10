@@ -1,5 +1,4 @@
 import React from "react";
-import { motion } from "framer-motion";
 import { FaStethoscope, FaSyringe, FaCut, FaTeeth, FaFirstAid, FaBath } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
@@ -46,21 +45,21 @@ function Services() {
   return (
     <div className="min-h-screen bg-yellow-50 py-16 px-6">
       <div className="max-w-6xl mx-auto">
-        <motion.h2
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+        <h2
+          
+          
+          
           className="text-4xl font-bold text-yellow-900 text-center mb-12"
         >
           Our Veterinary Services
-        </motion.h2>
+        </h2>
 
         {/* Services Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {services.map((service, index) => (
-            <motion.div
+            <div
               key={index}
-              whileHover={{ scale: 1.05 }}
+              
               className="bg-white p-8 rounded-3xl shadow-xl text-center hover:shadow-2xl transition-shadow"
             >
               <div className="mb-4 flex justify-center">{service.icon}</div>
@@ -72,15 +71,15 @@ function Services() {
               </p>
               {/* Pass service name and price as query params */}
               <Link to={`/appointmentAdd?service=${encodeURIComponent(service.title)}&price=${encodeURIComponent(service.price)}`}>
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
+                <button
+                  
+                  
                   className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-xl shadow-md"
                 >
                   Book Now
-                </motion.button>
+                </button>
               </Link>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

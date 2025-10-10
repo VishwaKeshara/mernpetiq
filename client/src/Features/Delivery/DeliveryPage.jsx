@@ -12,10 +12,10 @@ const PROVINCES = [
 
 export default function DeliveryPage() {
   const navigate = useNavigate();
-  const location = useLocation();
+  // const location = useLocation();
 
-  // Get appointment data from navigation state
-  const appointmentData = location.state?.appointment;
+  // Get appointment data from navigation state (currently unused)
+  // const appointmentData = location.state?.appointment;
 
   
   const params = new URLSearchParams(window.location.search);

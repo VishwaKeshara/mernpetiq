@@ -2,33 +2,31 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import CartIcon from "./CartIcon";
 import { 
-  FaPaw,  
+  FaPaw, 
+  FaUser, 
   FaSignInAlt, 
   FaUserPlus, 
   FaSignOutAlt, 
   FaInfoCircle, 
   FaCut, 
   FaConciergeBell,
-  FaShoppingBag 
+  FaCreditCard
 } from "react-icons/fa";
 
 function Navbar() {
   const { user, logout } = useAuth();
-  
-  // Force re-render when user changes
-  console.log("Navbar - User avatar:", user?.avatarUrl);
 
-  const menuVariants = {
-    hidden: { y: -50, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { staggerChildren: 0.1 } },
+  // Function to get proper avatar source
+  const getAvatarSrc = (avatarUrl) => {
+    if (!avatarUrl || avatarUrl.trim() === "" || avatarUrl === "null" || avatarUrl === "undefined") {
+      return null; // Return null to use default styling instead of external placeholder
+    }
+    
+    // If avatarUrl doesn't start with http, prepend the server URL
+    return avatarUrl.startsWith('http') ? avatarUrl : `http://localhost:3000${avatarUrl}`;
   };
 
-  const itemVariants = {
-    hidden: { y: -20, opacity: 0 },
-    visible: { y: 0, opacity: 1 },
-  };
 
   return (
     <nav
@@ -43,16 +41,11 @@ function Navbar() {
         
         
       >
-        <FaPaw /> <Link to="/home">PetIQ</Link>
+        <FaPaw /> <Link to="/home">PetIQ.lk</Link>
       </div>
 
    
-      <div
-        className="flex gap-6 items-center"
-        
-        initial="hidden"
-        animate="visible"
-      >
+      <div className="flex gap-6 items-center">
 
         <div
           className="flex items-center gap-1"
@@ -61,27 +54,7 @@ function Navbar() {
           
         >
           <FaPaw />
-          <Link to="/home">Home</Link>
-        </div>
-
-        <div
-          className="flex items-center gap-1"
-          
-          
-          
-        >
-          <FaShoppingBag />
-          <Link to="/products">Pet Products</Link>
-        </div>
-
-        <div
-          className="flex items-center gap-1"
-          
-          
-          
-        >
-          <FaCut />
-          <Link to="/services">Services</Link>
+          <Link to="/">Home</Link>
         </div>
 
         <div
@@ -91,17 +64,33 @@ function Navbar() {
           
         >
           <FaInfoCircle />
-          <Link to="/about">About Us</Link>
+          <Link to="/about">About</Link>
         </div>
 
-        {/* Cart Icon */}
-        <div >
-          <CartIcon />
+        <div
+          className="flex items-center gap-1"
+          
+          
+          
+        >
+          <FaCut />
+          <Link to="/grooming">Grooming</Link>
+        </div>
+
+        <div
+          className="flex items-center gap-1"
+          
+          
+          
+        >
+          <FaConciergeBell />
+          <Link to="/services">Services</Link>
         </div>
 
        
         {user ? (
           <>
+        
     
             <div
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 cursor-pointer"
@@ -109,22 +98,22 @@ function Navbar() {
               
               
             >
-              <img
-                key={user.avatarUrl || 'default'}
-                src={
-                  user.avatarUrl 
-                    ? user.avatarUrl.startsWith("http") 
-                      ? user.avatarUrl 
-                      : `http://localhost:3000${user.avatarUrl}`
-                    : "/assets/default-avatar.png"
-                }
-                alt="avatar"
-                className="w-8 h-8 rounded-full object-cover shadow-md"
-                onError={(e) => {
-                  console.log("Image load error for:", e.target.src);
-                  e.target.src = "/assets/default-avatar.png";
-                }}
-              />
+              {getAvatarSrc(user.avatarUrl) ? (
+                <img
+                  src={getAvatarSrc(user.avatarUrl)}
+                  alt="avatar"
+                  className="w-8 h-8 rounded-full object-cover shadow-md"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div 
+                className={`w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center shadow-md ${getAvatarSrc(user.avatarUrl) ? 'hidden' : 'flex'}`}
+              >
+                <FaUser className="text-yellow-800 text-sm" />
+              </div>
               <Link to="/profile" className="font-semibold">
                 {user.name}
               </Link>
@@ -151,17 +140,17 @@ function Navbar() {
               
             >
               <FaSignInAlt />
-              <Link to="/login">Sign In</Link>
+              <Link to="/login">Login</Link>
             </div>
-            
+
             <div
               className="flex items-center gap-2"
               
               
               
             >
-              <FaSignInAlt />
-              <Link to="/adminlogin">Admin Login</Link>
+              <FaUserPlus />
+              <Link to="/signup">Register</Link>
             </div>
           </>
         )}

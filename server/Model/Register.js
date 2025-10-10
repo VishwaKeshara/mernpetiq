@@ -1,24 +1,26 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-const employeeSchema = new mongoose.Schema({
+const registerSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { 
-        type: String, 
-        required: true, 
-        enum: ['admin', 'veterinarian', 'nurse', 'receptionist'],
-        default: 'admin'
-    },
     avatarUrl: { type: String },
+    phone: { type: String },
+    addressLine1: { type: String },
+    addressLine2: { type: String },
+    city: { type: String },
+    state: { type: String },
+    postalCode: { type: String },
+    country: { type: String },
+    dateOfBirth: { type: Date },
     isActive: { type: Boolean, default: true },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
 
 
-employeeSchema.pre('save', async function(next) {
+registerSchema.pre('save', async function(next) {
     if (!this.isModified('password')) return next();
     
     try {
@@ -30,17 +32,17 @@ employeeSchema.pre('save', async function(next) {
     }
 });
 
-
-employeeSchema.methods.comparePassword = async function(candidatePassword) {
+// Compare password method
+registerSchema.methods.comparePassword = async function(candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
 };
 
-
-employeeSchema.pre('save', function(next) {
+// Update the updatedAt field before saving
+registerSchema.pre('save', function(next) {
     this.updatedAt = Date.now();
     next();
 });
 
-const Employees = mongoose.model("Employees", employeeSchema);
+const Register = mongoose.model("Register", registerSchema);
 
-export default Employees;
+export default Register;
