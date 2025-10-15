@@ -1,5 +1,5 @@
 // Navbar.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { motion } from "framer-motion";
@@ -7,16 +7,48 @@ import CartIcon from "./CartIcon";
 import { 
   FaPaw,  
   FaSignInAlt, 
-  FaUserPlus, 
   FaSignOutAlt, 
   FaInfoCircle, 
   FaCut, 
-  FaConciergeBell,
   FaShoppingBag 
 } from "react-icons/fa";
 
 function Navbar() {
   const { user, logout } = useAuth();
+
+  // Force CartIcon to refresh when cart changes (no UI changes)
+  const [cartVersion, setCartVersion] = useState(0);
+  useEffect(() => {
+    const update = () => setCartVersion(Date.now());
+
+    // Custom event fired by PaymentPage after Mart success
+    window.addEventListener("cart:changed", update);
+
+    // Refresh on tab focus/visibility as a fallback
+    window.addEventListener("focus", update);
+    document.addEventListener("visibilitychange", update);
+
+    // Cross-tab/localStorage change listener
+    const onStorage = (e) => {
+      if (
+        e.key === "cart:version" ||
+        e.key === "cart" ||
+        e.key === "cartItems" ||
+        e.key === "cart_count" ||
+        e.key === "cartCount"
+      ) {
+        update();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      window.removeEventListener("cart:changed", update);
+      window.removeEventListener("focus", update);
+      document.removeEventListener("visibilitychange", update);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   const menuVariants = {
     hidden: { y: -50, opacity: 0 },
@@ -35,7 +67,6 @@ function Navbar() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-     
       <motion.div
         className="flex items-center font-bold text-2xl gap-2"
         whileHover={{ scale: 1.1 }}
@@ -44,14 +75,12 @@ function Navbar() {
         <FaPaw /> <Link to="/home">PetIQ</Link>
       </motion.div>
 
-   
       <motion.div
         className="flex gap-6 items-center"
         variants={menuVariants}
         initial="hidden"
         animate="visible"
       >
-
         <motion.div
           className="flex items-center gap-1"
           variants={itemVariants}
@@ -92,15 +121,13 @@ function Navbar() {
           <Link to="/about">About Us</Link>
         </motion.div>
 
-        {/* Cart Icon */}
+        {/* Cart Icon (re-mount on version change to refresh badge) */}
         <motion.div variants={itemVariants}>
-          <CartIcon />
+          <CartIcon key={cartVersion} />
         </motion.div>
 
-       
         {user ? (
           <>
-    
             <motion.div
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 cursor-pointer"
               variants={itemVariants}
@@ -117,7 +144,6 @@ function Navbar() {
               </Link>
             </motion.div>
 
-          
             <motion.button
               onClick={logout}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600"
