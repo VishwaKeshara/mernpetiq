@@ -8,11 +8,30 @@ import {
   CardCvcElement,
 } from "@stripe/react-stripe-js";
 import { paymentBaseURL } from "../../axiosinstance";
+import { useCart } from "../../context/CartContext";
+
+// Helper: LKR formatter (always show LKR to users)
+const formatLKR = (value) => {
+  try {
+    return new Intl.NumberFormat("en-LK", { style: "currency", currency: "LKR", maximumFractionDigits: 0 }).format(value);
+  } catch {
+    return `LKR ${Number(value || 0).toFixed(0)}`;
+  }
+};
+
+// Helper: Title Case for service names
+const titleCase = (str = "") =>
+  String(str)
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function PaymentPage() {
   const stripe = useStripe();
   const elements = useElements();
   const MAX_CARDS = 3;
+
+  const { clearCart } = useCart(); // use cart context to clear badge immediately
 
   const inputBase =
     "block w-full h-12 border rounded-md bg-white px-3 pr-12 outline-none focus:ring-2";
@@ -35,7 +54,9 @@ export default function PaymentPage() {
   const reviewImages = ["/images/vmsp4.webp", "/images/vmsp5.webp", "/images/vmsp6.webp"];
 
   const location = useLocation();
-  const [step, setStep] = useState(() => location.state?.step || new URLSearchParams(location.search).get("step") || "form");
+  const [step, setStep] = useState(
+    () => location.state?.step || new URLSearchParams(location.search).get("step") || "form"
+  );
   const [mode, setMode] = useState(() => new URLSearchParams(location.search).get("mode") || "add");
   const [editingId, setEditingId] = useState(null);
 
@@ -45,12 +66,29 @@ export default function PaymentPage() {
     }
   }, [location.state]);
 
+  // Keep step/mode in URL; copy core context (amount/source/ref/service) from state to URL once so Back works
   useEffect(() => {
     const url = new URL(window.location.href);
     url.searchParams.set("step", step);
     url.searchParams.set("mode", mode);
-    window.history.pushState({ step, mode }, "", url.toString());
-  }, [step, mode]);
+
+    const has = (k) => !!url.searchParams.get(k);
+    const stateSource = location.state?.source;
+    const stateAmount = location.state?.amount;
+    const stateRef = location.state?.ref;
+    const stateService =
+      location.state?.service ||
+      location.state?.serviceName ||
+      location.state?.selectedService;
+
+    if (stateSource && !has("source")) url.searchParams.set("source", String(stateSource));
+    if (stateAmount != null && !has("total"))
+      url.searchParams.set("total", String(Math.round(Number(stateAmount) || 0)));
+    if (stateRef && !has("ref")) url.searchParams.set("ref", String(stateRef));
+    if (stateService && !has("service")) url.searchParams.set("service", String(stateService));
+
+    window.history.pushState({ ...(window.history.state || {}), step, mode }, "", url.toString());
+  }, [step, mode, location.state]);
 
   useEffect(() => {
     const onPop = () => {
@@ -62,27 +100,24 @@ export default function PaymentPage() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // Persist incoming query params
+  // Persist only safe values (DO NOT persist source/service/ref to avoid cross-flow leaks)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const t = params.get("total");
     const c = params.get("currency");
-    const s = params.get("source");
-    const r = params.get("ref");
     if (t != null) localStorage.setItem("vms:total", t);
     if (c) localStorage.setItem("vms:currency", c.toUpperCase());
-    if (s) localStorage.setItem("vms:source", s);
-    if (r) localStorage.setItem("vms:ref", r);
   }, []);
 
-  // Amount + context (we FORCE USD for charging)
+  // Amount + context (we DISPLAY in LKR everywhere)
   const { amount, currency, source, ref } = useMemo(() => {
-    if (location.state?.amount) {
+    // Prefer navigation state
+    if (location.state?.amount != null) {
       return {
-        amount: Number(location.state.amount),
-        currency: "USD", // force USD usage now
-        source: location.state.source || "hospital",
-        ref: location.state.ref
+        amount: Math.round(Number(location.state.amount) || 0), // LKR integer
+        currency: "LKR",
+        source: (location.state.source || "").toString().trim().toLowerCase() || "unknown",
+        ref: (location.state.ref || "").toString().trim() || null,
       };
     }
 
@@ -95,32 +130,65 @@ export default function PaymentPage() {
 
     const urlTotal = readNum(params.get("total"));
     const lsTotal = readNum(localStorage.getItem("vms:total"));
-    const amount = urlTotal ?? lsTotal ?? 0;
+    const amount = Math.round(urlTotal ?? lsTotal ?? 0);
 
-    // We no longer trust incoming currency; we always treat charge currency as USD
-    let displayCurrency = "USD";
+    const displayCurrency = "LKR";
 
-    const urlPurpose = params.get("purpose");
-    const urlSource = params.get("source");
-    const urlRef = params.get("ref");
-    const lsPurpose = localStorage.getItem("vms:purpose");
-    const lsSource = localStorage.getItem("vms:source");
-    const lsRef = localStorage.getItem("vms:ref");
+    // Resolve from state/URL only (no localStorage fallbacks)
+    const urlSource = (params.get("source") || "").toString().trim().toLowerCase();
+    const urlRef = (params.get("ref") || "").toString().trim();
+    const stateSource = (location.state?.source || "").toString().trim().toLowerCase();
 
-    const source =
-      (urlPurpose || urlSource || lsPurpose || lsSource || "unknown").toString().trim();
-    const ref = (urlRef || lsRef || "").toString().trim() || null;
+    // Prefer explicit source from state/URL
+    let resolvedSource = stateSource || urlSource;
+
+    // If still missing, infer:
+    // - hospital if ref looks like APPT-000123 or 24-hex AND appointmentId exists
+    // - mart if URL's purpose contains 'mart'
+    if (!resolvedSource) {
+      const appointmentId = params.get("appointmentId");
+      const urlPurpose = (params.get("purpose") || "").toString().trim().toLowerCase();
+      if ((/^APPT-\d{6}$/i.test(urlRef) || /^[a-f0-9]{24}$/i.test(urlRef)) && appointmentId) {
+        resolvedSource = "hospital";
+      } else if (urlPurpose.includes("mart")) {
+        resolvedSource = "mart";
+      }
+    }
+
+    const source = resolvedSource || "unknown";
+    const ref = urlRef || null;
 
     return { amount, currency: displayCurrency, source, ref };
   }, [location.state]);
 
-  const formattedTotal = useMemo(() => {
-    try {
-      return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
-    } catch {
-      return `$${Number(amount || 0).toFixed(2)}`;
+  // Service name ONLY from explicit service fields (never from "purpose" to avoid Hospital-Mart)
+  const service = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const svc =
+      location.state?.service ||
+      location.state?.serviceName ||
+      location.state?.selectedService ||
+      params.get("service") ||
+      params.get("serviceName") ||
+      params.get("selectedService") ||
+      "";
+    if (svc) return svc;
+    // As a last resort for hospital, allow description in state/URL to stand in
+    if (source === "hospital") {
+      return location.state?.description || params.get("description") || "";
     }
-  }, [amount, currency]);
+    return "";
+  }, [location.state, source]);
+
+  // What we display as Purpose
+  const displayPurpose = useMemo(() => {
+    if (source === "mart") return "Mart";
+    const svc = service ? titleCase(service) : "";
+    return svc ? `Hospital-${svc}` : "Hospital";
+  }, [source, service]);
+
+  // LKR formatted total for summary
+  const formattedTotal = useMemo(() => formatLKR(amount), [amount]);
 
   const [cardNumber, setCardNumber] = useState("");
   const [cvv, setCvv] = useState("");
@@ -187,6 +255,7 @@ export default function PaymentPage() {
     return raw;
   };
 
+  // Expiry validation
   const isExpiryValid = (mm, yyyy) => {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
@@ -197,21 +266,22 @@ export default function PaymentPage() {
     return true;
   };
 
+  // Load saved cards
   const loadCards = async () => {
     try {
       const { data } = await paymentBaseURL.get("/payment-methods");
       setSavedCards(
         data.map((card) => ({
           id: card.pmId || card.id,
-            last4: card.last4,
-            name: card.billing_name || card.billing_details?.name || "",
-            brand: card.brand,
-            expMonth: card.exp_month,
-            expYear: card.exp_year,
-            expiryDisplay:
-              card.exp_month && card.exp_year
-                ? formatDisplayExpiry(card.exp_month, card.exp_year)
-                : "—",
+          last4: card.last4,
+          name: card.billing_name || card.billing_details?.name || "",
+          brand: card.brand,
+          expMonth: card.exp_month,
+          expYear: card.exp_year,
+          expiryDisplay:
+            card.exp_month && card.exp_year
+              ? formatDisplayExpiry(card.exp_month, card.exp_year)
+              : "—",
         }))
       );
     } catch (error) {
@@ -236,7 +306,8 @@ export default function PaymentPage() {
     } else if (errors.expiry) {
       setErrors((er) => ({ ...er, expiry: null }));
     }
-  }, [expiryRaw]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expiryRaw]);
 
   const [errors, setErrors] = useState({
     cardNumber: null,
@@ -268,7 +339,6 @@ export default function PaymentPage() {
     }
     e.preventDefault();
   }
-
   function handleExpiryPaste(e) {
     e.preventDefault();
     const txt = (e.clipboardData || window.clipboardData).getData("text") || "";
@@ -286,7 +356,6 @@ export default function PaymentPage() {
   }
 
   const isNameValid = () => nameOnCard.trim().length > 0;
-
   function handleCardNumberChange(e) {
     let v = e.target.value.replace(/\D/g, "").slice(0, 19);
     v = v.replace(/(\d{4})(?=\d)/g, "$1 ");
@@ -320,7 +389,6 @@ export default function PaymentPage() {
     });
     setCardError(null);
   }
-
   function focusCardNumber() {
     setTimeout(() => {
       const iframe = document.querySelector("iframe[name^='__privateStripeFrame']");
@@ -358,7 +426,6 @@ export default function PaymentPage() {
     setStep("form");
     focusCardNumber();
   }
-
   function startEdit(card) {
     setMode("edit");
     setEditingId(card.id);
@@ -375,7 +442,6 @@ export default function PaymentPage() {
       el?.focus();
     }, 0);
   }
-
   async function handleDeleteCard(id) {
     try {
       await paymentBaseURL.delete(`/payment-method/${id}`);
@@ -604,6 +670,8 @@ export default function PaymentPage() {
 
   const [paidAt, setPaidAt] = useState(null);
   const [paidAmount, setPaidAmount] = useState("");
+  const [displayRef, setDisplayRef] = useState(null); // pretty APPT/MART ref from backend
+
   const formatDateTime = (d) => {
     if (!d) return "";
     try {
@@ -619,9 +687,33 @@ export default function PaymentPage() {
     }
   };
 
-  // UPDATED: charge in USD
+  // Clear cart and notify app after successful Mart payment
+  function clearCartAfterMartPayment() {
+    try {
+      // Update React Context so CartIcon badge changes immediately
+      clearCart();
+    } catch {}
+
+    try {
+      // Optional server-side clear (ignore if route doesn't exist)
+      paymentBaseURL.post("/cart/clear").catch(() => {});
+    } catch {}
+
+    try {
+      // Remove common localStorage cart keys (adjust names if your app uses different keys)
+      const keys = ["cart", "cartItems", "cart_count", "cartCount"];
+      keys.forEach((k) => localStorage.removeItem(k));
+      // Help other tabs/listeners detect the change
+      localStorage.setItem("cart:version", String(Date.now()));
+    } catch {}
+
+    try {
+      // Let any listeners refresh immediately
+      window.dispatchEvent(new CustomEvent("cart:changed", { detail: { count: 0 } }));
+    } catch {}
+  }
+  
   async function handleUsePayment() {
-    console.log("handleUsePayment called", selectedId);
     setCardError(null);
 
     if (!selectedId) {
@@ -633,35 +725,30 @@ export default function PaymentPage() {
       return;
     }
 
-    const raw = Number(amount || 0);
-    if (!Number.isFinite(raw)) {
-      setCardError("Amount is invalid");
+    const amountLkr = Math.round(Number(amount || 0));
+    if (!Number.isFinite(amountLkr) || amountLkr < 1) {
+      setCardError("Amount must be at least LKR 1");
       return;
     }
 
-    // Convert USD dollars → cents
-    const amountInCents = Math.round(raw * 100);
+    // Determine flow robustly for payload
+    const params = new URLSearchParams(window.location.search);
+    const appointmentId = params.get("appointmentId");
+    const isHospitalFlow = source === "hospital" || !!appointmentId || !!service;
 
-    // Stripe minimum for USD is $0.50 (50 cents)
-    if (amountInCents < 50) {
-      setCardError("Minimum charge is $0.50 USD.");
-      return;
-    }
+    const payloadSource = isHospitalFlow ? "hospital" : "mart";
+    const payloadDescription = isHospitalFlow
+      ? (service ? String(service) : "Hospital appointment payment")
+      : "Mart purchase payment";
 
     const paymentData = {
-      amount: amountInCents,
-      currency: "usd",
+      amount_lkr: amountLkr,
+      currency: "lkr",
       payment_method: selectedId,
-      source: source,
+      source: payloadSource,
       ref_id: ref || "",
-      description:
-        location.state?.description ||
-        (source === "Mart"
-          ? "Mart purchase payment"
-          : "Hospital appointment payment"),
+      description: payloadDescription,
     };
-
-    console.log("PAYMENT DATA (USD cents):", paymentData);
 
     try {
       let { data: paymentRes } = await paymentBaseURL.post(
@@ -674,74 +761,68 @@ export default function PaymentPage() {
         return;
       }
 
-      // If extra authentication required (3DS)
+      // 3DS flow
       if (paymentRes.requiresAction && paymentRes.clientSecret) {
         if (!stripe) {
           setCardError("Stripe not ready. Try again.");
           return;
         }
-        const result = await stripe.confirmCardPayment(
-          paymentRes.clientSecret
-        );
+        const result = await stripe.confirmCardPayment(paymentRes.clientSecret);
         if (result.error) {
-          setCardError(
-            result.error.message || "Payment authentication failed."
-          );
+          setCardError(result.error.message || "Payment authentication failed.");
+          return;
+        }
+        const pi = result.paymentIntent;
+        if (!pi || pi.status !== "succeeded") {
+          setCardError("Payment not completed. Please try again.");
           return;
         }
 
-        // After successful auth you might want to refetch final status (if backend not confirming automatically)
-        const { data: confirmRes } = await paymentBaseURL.post(
-          "/create-payment-intent",
-          paymentData
-        );
-        if (!confirmRes.success) {
-          setCardError(
-            confirmRes.error ||
-              "Payment failed after confirmation. Please try again."
-          );
-          return;
-        }
-        paymentRes = confirmRes;
-      }
+        setPaidAt(new Date());
+        setPaidAmount(formatLKR(paymentRes.amount_lkr ?? amountLkr));
+        setDisplayRef(paymentRes.ref_id || ref || null);
 
-      if (!paymentRes.success) {
-        setCardError(
-          paymentRes.message || "Payment failed. Please try again."
-        );
+        if (payloadSource === "mart") {
+          clearCartAfterMartPayment();
+        }
+
+        // Optional appointment status update
+        if (appointmentId) {
+          try {
+            await paymentBaseURL.put(`/appointment/${appointmentId}/payment-status`, {
+              paymentIntentId: pi.id,
+              paymentStatus: "completed",
+            });
+          } catch {}
+        }
+
+        setStep("success");
         return;
       }
 
-      const finalAmountUSD = paymentRes.amount
-        ? paymentRes.amount / 100
-        : raw;
-
-      setPaidAt(new Date());
-      try {
-        setPaidAmount(
-          new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "USD",
-          }).format(finalAmountUSD)
-        );
-      } catch {
-        setPaidAmount(`$${finalAmountUSD.toFixed(2)}`);
+      // Direct success
+      if (!paymentRes.success) {
+        setCardError(paymentRes.message || "Payment failed. Please try again.");
+        return;
       }
 
-      const params = new URLSearchParams(location.search);
-      const appointmentId = params.get("appointmentId");
+      setPaidAt(new Date());
+      setPaidAmount(formatLKR(paymentRes.amount_lkr ?? amountLkr));
+      setDisplayRef(paymentRes.ref_id || ref || null);
+
+      // Clear cart only for Mart payments (for non-3DS direct success)
+      if (payloadSource === "mart") {
+        clearCartAfterMartPayment();
+      }
+
+      // Optional appointment status update
       if (appointmentId) {
         try {
-          await paymentBaseURL.put(
-            `/appointment/${appointmentId}/payment-status`,
-            {
-              paymentIntentId: paymentRes.paymentIntentId,
-              paymentStatus: "completed",
-            }
-          );
-        } catch {
-          /* swallow */
-        }
+          await paymentBaseURL.put(`/appointment/${appointmentId}/payment-status`, {
+            paymentIntentId: paymentRes.paymentIntentId,
+            paymentStatus: "completed",
+          });
+        } catch {}
       }
 
       setStep("success");
@@ -751,12 +832,9 @@ export default function PaymentPage() {
           error?.message ||
           "Payment failed. Please try again."
       );
-      // You can remove the alert if noisy
       alert(
         "API error: " +
-          JSON.stringify(
-            error?.response?.data || error?.message || error
-          )
+          JSON.stringify(error?.response?.data || error?.message || error)
       );
     }
   }
@@ -1134,12 +1212,14 @@ export default function PaymentPage() {
                     </div>
                     <div className="text-gray-700">Purpose:</div>
                     <div className="text-right text-gray-900 capitalize">
-                      {source}
+                      {displayPurpose}
                     </div>
-                    {ref && (
+                    {(displayRef || ref) && (
                       <>
                         <div className="text-gray-700">Reference:</div>
-                        <div className="text-right text-gray-900">{ref}</div>
+                        <div className="text-right text-gray-900">
+                          {displayRef || ref}
+                        </div>
                       </>
                     )}
                     <div className="text-gray-700">Date &amp; Time:</div>
@@ -1175,15 +1255,10 @@ export default function PaymentPage() {
                 <div className="flex justify-between">
                   <span>Purpose</span>
                   <span className="font-medium text-gray-900 capitalize">
-                    {source}
+                    {displayPurpose}
                   </span>
                 </div>
-                {ref && (
-                  <div className="flex justify-between mt-1">
-                    <span>Reference</span>
-                    <span className="font-medium text-gray-900">{ref}</span>
-                  </div>
-                )}
+                {/* Reference intentionally not shown in review summary */}
               </div>
             </div>
             {activeImages.length > 0 && (
@@ -1215,7 +1290,7 @@ export default function PaymentPage() {
             className="absolute inset-0 bg-black/40"
             onClick={() => setConfirmDeleteId(null)}
           />
-            <div className="relative z-10 w-[92%] max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          <div className="relative z-10 w-[92%] max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
               <svg viewBox="0 0 24 24" className="h-8 w-8 text-red-500">
                 <path
@@ -1239,17 +1314,17 @@ export default function PaymentPage() {
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setConfirmDeleteId(null)}
-                className="rounded-full border border-gray-300 bg-gray-100 py-3 text-gray-700 hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
                 onClick={() => handleDeleteCard(confirmDeleteId)}
                 className="rounded-full bg-red-500 py-3 text-white hover:bg-red-600"
               >
                 Delete
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteId(null)}
+                className="rounded-full border border-gray-300 bg-gray-100 py-3 text-gray-700 hover:bg-gray-200"
+              >
+                Cancel
               </button>
             </div>
           </div>
