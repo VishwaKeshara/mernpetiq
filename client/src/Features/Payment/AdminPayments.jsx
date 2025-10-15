@@ -1,28 +1,43 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-
 export default function AdminPayments() {
   const API_BASE = "http://localhost:5000/api/payment";
 
   const [source, setSource] = useState("any");
   const [refText, setRefText] = useState("");
+  const [serviceText, setServiceText] = useState("");
 
-  
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(() => new Set());
   const [error, setError] = useState("");
-  const [serviceText, setServiceText] = useState("");
 
-  
-  const fmtAmount = (cents, currency) => {
+  // Use the exchange rate saved per-transaction when available.
+  // Fallback to a default for old records that don't have it saved.
+  const DEFAULT_LKR_PER_USD = 300; // Optionally load from env or a small FX endpoint.
+
+  const formatLKR = (val) => {
     try {
-      const n = (Number(cents || 0) / 100);
-      return new Intl.NumberFormat(undefined, { style: "currency", currency: (currency || "usd").toUpperCase() }).format(n);
+      return new Intl.NumberFormat("en-LK", {
+        style: "currency",
+        currency: "LKR",
+        maximumFractionDigits: 0, // LKR is zero-decimal for display
+      }).format(Number(val || 0));
     } catch {
-      const n = (Number(cents || 0) / 100).toFixed(2);
-      return `${(currency || "USD").toUpperCase()} ${n}`;
+      return `LKR ${Number(val || 0).toFixed(0)}`;
     }
+  };
+
+  // Prefer amount_lkr field. If missing (older records), derive from USD cents using the stored rate or a default.
+  const fmtAmountLKR = (tx) => {
+    if (typeof tx?.amount_lkr === "number" && !Number.isNaN(tx.amount_lkr)) {
+      return formatLKR(tx.amount_lkr);
+    }
+    const usdCents = Number(tx?.amount || 0);
+    const usd = usdCents / 100;
+    const rate = Number(tx?.exchange_rate_lkr_per_usd) || DEFAULT_LKR_PER_USD;
+    const lkr = Math.round(usd * rate);
+    return formatLKR(lkr);
   };
 
   const fetchTx = async () => {
@@ -34,10 +49,10 @@ export default function AdminPayments() {
       if (source && source !== "any") params.set("source", source);
       const refClean = refText.trim();
       if (refClean) params.set("ref", refClean);
-      if (serviceText.trim()) params.set("service", serviceText.trim());
+      const svcClean = serviceText.trim();
+      if (svcClean) params.set("service", svcClean);
 
       const url = `${API_BASE}/payments${params.toString() ? `?${params.toString()}` : ""}`;
-
       const res = await fetch(url);
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error("Unexpected response");
@@ -51,9 +66,9 @@ export default function AdminPayments() {
     }
   };
 
-  
   useEffect(() => {
     fetchTx();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const allChecked = useMemo(
@@ -83,12 +98,14 @@ export default function AdminPayments() {
     if (!window.confirm(`Delete ${selected.size} record(s)?`)) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/payment/admin/tx/bulk-delete`, {
-
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: Array.from(selected) }),
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/payment/admin/tx/bulk-delete`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: Array.from(selected) }),
+        }
+      );
       const out = await res.json();
       if (!res.ok || out.error) throw new Error(out.error || "Delete failed");
       await fetchTx();
@@ -97,11 +114,11 @@ export default function AdminPayments() {
     }
   };
 
-  const resetFilters = () => {
+  const resetFilters = async () => {
     setSource("any");
     setRefText("");
-     setServiceText("");
-  fetchTx();
+    setServiceText("");
+    await fetchTx();
   };
 
   const onSearch = async (e) => {
@@ -111,9 +128,12 @@ export default function AdminPayments() {
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-6">Paymet Records</h1>
+      <h1 className="text-2xl font-semibold mb-6">Payment Records</h1>
 
-      <form onSubmit={onSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+      <form
+        onSubmit={onSearch}
+        className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end"
+      >
         <div>
           <label className="block text-sm text-gray-700 mb-1">Source</label>
           <select
@@ -137,15 +157,16 @@ export default function AdminPayments() {
             className="w-full border rounded-md h-10 px-3"
           />
         </div>
+
         <div>
- <label className="block text-sm text-gray-700 mb-1">Service</label>
-  <input
-    value={serviceText}
-    onChange={(e) => setServiceText(e.target.value)}
-    placeholder="Vaccination, Groom, Dental, etc."
-    className="w-full border rounded-md h-10 px-3"
-  />
-</div>
+          <label className="block text-sm text-gray-700 mb-1">Service</label>
+          <input
+            value={serviceText}
+            onChange={(e) => setServiceText(e.target.value)}
+            placeholder="Vaccination, Groom, Dental, etc."
+            className="w-full border rounded-md h-10 px-3"
+          />
+        </div>
 
         <div className="flex gap-3">
           <button
@@ -157,7 +178,7 @@ export default function AdminPayments() {
           </button>
           <button
             type="button"
-            onClick={() => { resetFilters(); fetchTx(); }}
+            onClick={resetFilters}
             className="h-10 px-4 rounded-md border"
             disabled={loading}
           >
@@ -174,7 +195,11 @@ export default function AdminPayments() {
         <button
           onClick={clearSelected}
           disabled={selected.size === 0}
-          className={`h-9 px-4 rounded-md ${selected.size ? "bg-red-600 text-white hover:bg-red-700" : "bg-gray-200 text-gray-500 cursor-not-allowed"}`}
+          className={`h-9 px-4 rounded-md ${
+            selected.size
+              ? "bg-red-600 text-white hover:bg-red-700"
+              : "bg-gray-200 text-gray-500 cursor-not-allowed"
+          }`}
         >
           Clear selected
         </button>
@@ -197,7 +222,7 @@ export default function AdminPayments() {
               <th className="px-3 py-2 text-left">Reference</th>
               <th className="px-3 py-2 text-left">Description</th>
               <th className="px-3 py-2 text-left">Status</th>
-              <th className="px-3 py-2 text-right">Amount</th>
+              <th className="px-3 py-2 text-right">Amount (LKR)</th>
               <th className="px-3 py-2 text-left">Currency</th>
               <th className="px-3 py-2 text-left">PI ID</th>
             </tr>
@@ -212,6 +237,8 @@ export default function AdminPayments() {
             ) : (
               rows.map((r) => {
                 const id = r._id || r.piId;
+                const displayCurrency =
+                  (r.display_currency || "lkr").toUpperCase();
                 return (
                   <tr key={id} className="border-t">
                     <td className="px-3 py-2">
@@ -223,9 +250,13 @@ export default function AdminPayments() {
                       />
                     </td>
                     <td className="px-3 py-2">
-                      {r.createdAt ? new Date(r.createdAt).toLocaleString() : "—"}
+                      {r.createdAt
+                        ? new Date(r.createdAt).toLocaleString()
+                        : "—"}
                     </td>
-                    <td className="px-3 py-2 capitalize">{r.source || "—"}</td>
+                    <td className="px-3 py-2 capitalize">
+                      {r.source || "—"}
+                    </td>
                     <td className="px-3 py-2">{r.ref_id || "—"}</td>
                     <td className="px-3 py-2">{r.description || "—"}</td>
                     <td className="px-3 py-2">
@@ -242,9 +273,11 @@ export default function AdminPayments() {
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right">
-                      {fmtAmount(r.amount, r.currency)}
+                      {fmtAmountLKR(r)}
                     </td>
-                    <td className="px-3 py-2 uppercase">{r.currency || "—"}</td>
+                    <td className="px-3 py-2 uppercase">
+                      {displayCurrency}
+                    </td>
                     <td className="px-3 py-2">{r.piId || "—"}</td>
                   </tr>
                 );
