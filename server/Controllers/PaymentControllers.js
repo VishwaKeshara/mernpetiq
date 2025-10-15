@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import Stripe from "stripe";
 import { Card, Tx } from "../Model/PaymentModel.js";
 import AppointmentModel from '../Model/AppointmentModel.js';
+import { getNextRef } from "../utils/ref.js";
 
 const stripeKey = process.env.STRIPE_SECRET_KEY;
 if (!stripeKey) {
@@ -11,6 +12,9 @@ if (!stripeKey) {
 const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' });
 
 let CACHED_CUSTOMER_ID = process.env.STRIPE_CUSTOMER_ID || null;
+
+// Configure your LKR → USD exchange rate here (or via env)
+const FX_LKR_PER_USD = Number(process.env.FX_LKR_PER_USD || 300); // 1 USD ≈ 300 LKR as example
 
 export async function getOrCreateDemoCustomer() {
   if (CACHED_CUSTOMER_ID) return CACHED_CUSTOMER_ID;
@@ -76,13 +80,13 @@ export const getPaymentMethods = async (req, res) => {
       } else {
         await Card.findOneAndUpdate(
           { pmId: pm.id },
-            {
-              brand: pm.card.brand,
-              last4: pm.card.last4,
-              billing_name: pm.billing_details?.name || "",
-              stripe_customer: customer,
-              metadata: pm.metadata
-            }
+          {
+            brand: pm.card.brand,
+            last4: pm.card.last4,
+            billing_name: pm.billing_details?.name || "",
+            stripe_customer: customer,
+            metadata: pm.metadata
+          }
         );
       }
     }
@@ -198,53 +202,82 @@ export const updatePaymentMethod = async (req, res) => {
 
 /**
  * CREATE PAYMENT INTENT
- * Assumptions now:
- *  - Frontend sends amount in USD cents (integer).
- *  - We always charge in USD (because your Stripe account country is US).
- *  - We enforce Stripe's minimum of 50 cents.
- *
- * If later you want the backend to convert from dollars → cents, you can:
- *   const FRONTEND_SENDS_DOLLARS = process.env.FRONTEND_SENDS_DOLLARS === '1';
- *   if (FRONTEND_SENDS_DOLLARS) amount = Math.round(Number(amount) * 100);
+ * - Frontend sends amount_lkr (integer rupees). We DISPLAY in LKR but CHARGE in USD.
+ * - We convert LKR → USD cents using FX_LKR_PER_USD.
+ * - We enforce Stripe's minimum of $0.50 (50 cents).
+ * - We store both USD cents (for Stripe reconciliation) and LKR (for UI/admin display).
+ * - For appointments (source='hospital'), generate a pretty APPT reference for display.
+ * - For mart (source='mart'), auto-generate a pretty MART reference if missing.
  */
 export const createPaymentIntent = async (req, res) => {
   try {
     let {
       amount,
-      // currency ignored from client on purpose for safety
+      amount_lkr,
       payment_method,
       source,
       ref_id,
-      description
+      description,
+      currency
     } = req.body;
 
-    // Force USD no matter what
-    const currency = 'usd';
+    // Normalize incoming LKR amount
+    if (amount_lkr == null) {
+      if (currency && String(currency).toLowerCase() === 'lkr' && amount != null) {
+        amount_lkr = Math.round(Number(amount));
+      }
+    }
 
-    // Validate amount presence
-    if (amount === undefined || amount === null) {
+    if (amount_lkr == null) {
       return res.status(400).json({
-        error: "Amount is required",
-        received: { amount, type: typeof amount }
+        error: "amount_lkr is required (integer rupees)."
       });
     }
 
-    // Coerce to integer
-    amount = Math.round(Number(amount));
-
-    if (!Number.isFinite(amount)) {
+    amount_lkr = Math.round(Number(amount_lkr));
+    if (!Number.isFinite(amount_lkr) || amount_lkr < 1) {
       return res.status(400).json({
-        error: "Amount must be numeric",
-        received: { amount, type: typeof amount }
+        error: "amount_lkr must be a valid integer >= 1",
+        received: amount_lkr
       });
     }
 
-    // Frontend should already send cents. If it accidentally sent a small number (e.g. 10 meaning $10)
-    // you could detect and auto-scale, but better to fail explicitly:
-    if (amount < 50) {
+    // Normalize/derive source
+    let src = (source || '').toString().trim().toLowerCase();
+    if (src !== 'hospital' && src !== 'mart') {
+      const desc = (description || '').toString().toLowerCase();
+      if (desc.includes('mart')) src = 'mart';
+      else if (desc.includes('hospital')) src = 'hospital';
+      else src = 'unknown';
+    }
+
+    // Hospital (appointments): keep original appointmentId for internal updates, generate pretty APPT ref for display
+    let appointmentId = null;
+    let apptPrettyRef = null;
+    if (src === 'hospital') {
+      appointmentId = (ref_id && String(ref_id).trim()) ? String(ref_id).trim() : null;
+      apptPrettyRef = await getNextRef('APPT'); // APPT-000001
+    }
+
+    // Mart (product): if no ref provided, generate pretty MART ref for display/storage
+    let martPrettyRef = null;
+    if (src === 'mart') {
+      const incomingRef = (ref_id && String(ref_id).trim()) ? String(ref_id).trim() : null;
+      if (!incomingRef) {
+        martPrettyRef = await getNextRef('MART'); // MART-000001
+      }
+    }
+
+    // Convert LKR → USD cents (Stripe charges USD)
+    const amount_usd_cents = Math.round((amount_lkr / FX_LKR_PER_USD) * 100);
+
+    // Enforce Stripe minimum of 50 cents
+    const minLkr = Math.ceil(0.5 * FX_LKR_PER_USD);
+    if (amount_usd_cents < 50) {
       return res.status(400).json({
-        error: "Amount must be at least 50 cents ($0.50 USD).",
-        receivedCents: amount
+        error: `Minimum charge is $0.50 (≈ LKR ${minLkr}). Increase the amount.`,
+        received_lkr: amount_lkr,
+        rate_lkr_per_usd: FX_LKR_PER_USD
       });
     }
 
@@ -276,43 +309,64 @@ export const createPaymentIntent = async (req, res) => {
       });
     }
 
-    // (Optional) Idempotency key suggestion if you fear double-clicks:
-    // const idempotencyKey = crypto.randomUUID();
+    // Decide metadata ref values per normalized source
+    const incomingRef = (ref_id && String(ref_id).trim()) ? String(ref_id).trim() : '';
+    const metaRefId =
+      src === 'hospital'
+        ? (appointmentId || incomingRef)
+        : (src === 'mart' ? (martPrettyRef || incomingRef) : incomingRef);
 
+    const metaPrettyRef =
+      src === 'hospital'
+        ? (apptPrettyRef || '')
+        : (src === 'mart' ? (martPrettyRef || '') : '');
+
+    // Create the PaymentIntent in USD
     const paymentIntent = await stripe.paymentIntents.create({
-      amount,          // cents
-      currency,        // 'usd'
+      amount: amount_usd_cents,     // cents
+      currency: 'usd',              // force USD
       customer,
       payment_method,
       confirm: true,
       off_session: true,
-      description: description || 'Hospital appointment payment',
+      description: description || (src === 'mart' ? 'Mart purchase payment' : 'Hospital appointment payment'),
       metadata: {
-        source: source || 'hospital',
-        ref_id: ref_id || ''
+        source: src, // normalized
+        ref_id: metaRefId,
+        pretty_ref: metaPrettyRef,
+        original_amount_lkr: String(amount_lkr),
+        display_currency: 'lkr',
+        exchange_rate_lkr_per_usd: String(FX_LKR_PER_USD)
       },
       confirmation_method: 'automatic'
-      // , idempotencyKey // if using stripe.request with options
     });
 
-    // Persist transaction
+    // Determine display/store reference
+    const displayRef = apptPrettyRef || martPrettyRef || incomingRef || '';
+
+    // Save transaction
     await Tx.create({
       piId: paymentIntent.id,
-      amount: paymentIntent.amount,
-      currency: paymentIntent.currency,
+      amount: paymentIntent.amount,               // USD cents
+      currency: paymentIntent.currency,           // 'usd'
       status: paymentIntent.status,
-      source: source || 'hospital',
-      ref_id: ref_id || '',
-      description: description || 'Hospital appointment payment',
+      source: src,                                 // normalized
+      ref_id: displayRef,                          // pretty APPT/MART ref (or incoming ref)
+      description: description || (src === 'mart' ? 'Mart purchase payment' : 'Hospital appointment payment'),
       stripe_customer: customer,
       payment_method,
-      metadata: paymentIntent.metadata
+      metadata: paymentIntent.metadata,
+
+      // LKR reporting
+      amount_lkr: amount_lkr,
+      exchange_rate_lkr_per_usd: FX_LKR_PER_USD,
+      display_currency: 'lkr'
     });
 
     if (paymentIntent.status === 'succeeded') {
-      if (source === 'hospital' && ref_id) {
+      if (src === 'hospital' && appointmentId) {
         await AppointmentModel.findByIdAndUpdate(
-          ref_id,
+          appointmentId,
           {
             paymentStatus: 'completed',
             paymentIntentId: paymentIntent.id,
@@ -322,11 +376,15 @@ export const createPaymentIntent = async (req, res) => {
       }
       return res.json({
         success: true,
-        amount: paymentIntent.amount,
-        currency: paymentIntent.currency,
+        amount: paymentIntent.amount,              // USD cents
+        currency: paymentIntent.currency,          // 'usd'
+        amount_lkr: amount_lkr,
+        display_currency: 'lkr',
+        exchange_rate_lkr_per_usd: FX_LKR_PER_USD,
         id: paymentIntent.id,
         paymentIntentId: paymentIntent.id,
-        status: paymentIntent.status
+        status: paymentIntent.status,
+        ref_id: displayRef || null
       });
     } else if (paymentIntent.status === 'requires_action') {
       return res.json({
@@ -435,7 +493,7 @@ export const stripeWebhook = async (req, res) => {
           { piId: paymentIntent.id },
           { status: paymentIntent.status }
         );
-        if (paymentIntent.metadata.source === 'hospital' && paymentIntent.metadata.ref_id) {
+        if (paymentIntent.metadata?.source === 'hospital' && paymentIntent.metadata?.ref_id) {
           await AppointmentModel.findByIdAndUpdate(
             paymentIntent.metadata.ref_id,
             {
@@ -453,7 +511,7 @@ export const stripeWebhook = async (req, res) => {
           { piId: failedPayment.id },
           { status: failedPayment.status }
         );
-        if (failedPayment.metadata.source === 'hospital' && failedPayment.metadata.ref_id) {
+        if (failedPayment.metadata?.source === 'hospital' && failedPayment.metadata?.ref_id) {
           await AppointmentModel.findByIdAndUpdate(
             failedPayment.metadata.ref_id,
             {
@@ -466,7 +524,6 @@ export const stripeWebhook = async (req, res) => {
         break;
       }
       default:
-        // Ignore other event types
         break;
     }
     res.json({ received: true });
