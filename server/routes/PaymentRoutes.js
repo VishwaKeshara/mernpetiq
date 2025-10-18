@@ -1,5 +1,6 @@
 import express from "express";
 import * as PaymentController from "../Controllers/PaymentControllers.js";
+import { getInvoice, getInvoiceByParam } from "../Controllers/InvoiceController.js";
 import Tx from "../Model/Tx.js";
 
 const router = express.Router();
@@ -16,10 +17,14 @@ router.post("/create-payment-intent", PaymentController.createPaymentIntent);
 router.post("/webhook", PaymentController.stripeWebhook);
 router.put("/appointment/:appointmentId/payment-status", PaymentController.updateAppointmentPaymentStatus);
 
-// ADMIN: Get all payments
+
+router.get("/invoice", getInvoice);                
+router.get("/payments/:id/invoice", getInvoiceByParam); 
+
+
 router.get("/payments", PaymentController.getAllPayments);
 
-// ADMIN: Bulk delete payments
+
 router.post("/admin/tx/bulk-delete", async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
