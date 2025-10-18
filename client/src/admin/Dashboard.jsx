@@ -24,7 +24,6 @@ import {
   Cell,
 } from "recharts";
 
-
 const metrics = [
   { name: "Total Pets", value: 324, delta: +12, icon: <FaPaw /> },
   { name: "Appts Today", value: 18, delta: -3, icon: <FaCalendarAlt /> },
@@ -80,7 +79,6 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 md:p-8 space-y-8 bg-amber-50 min-h-screen">
- 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Welcome back 👋</h1>
@@ -95,7 +93,6 @@ export default function Dashboard() {
           New Appointment
         </motion.button>
       </div>
-
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {metrics.map((m, i) => (
@@ -122,9 +119,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900">Appointments (Last 7 days)</h3>
@@ -161,7 +156,6 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-       
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900">Patient Species Mix</h3>
@@ -182,9 +176,7 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
- 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900">Upcoming Appointments</h3>
@@ -208,7 +200,6 @@ export default function Dashboard() {
           </ul>
         </motion.div>
 
-    
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900">Low Stock Alerts</h3>
