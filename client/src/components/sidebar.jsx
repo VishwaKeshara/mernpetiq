@@ -11,6 +11,7 @@ import {
   FaBoxOpen,
   FaAngleLeft,
   FaAngleRight,
+  FaTruck, 
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 import { useSidebar } from "../context/SidebarContext";
@@ -23,6 +24,7 @@ const links = [
   { name: "Medical Records", icon: <FaFileMedical />, path: "/admin/medical-records" },
   { name: "Pet Products", icon: <FaBoxOpen />, path: "/admin/products" },
   { name: "Payments", icon: <FaDollarSign />, path: "/admin/payments" },
+  { name: "Delivery Details", icon: <FaTruck />, path: "/admin/delivery-details" },
 ];
 
 const Sidebar = () => {
@@ -30,12 +32,10 @@ const Sidebar = () => {
 
   return (
     <div className="flex">
-   
       <motion.div
         animate={{ width: isOpen ? 250 : 60 }}
         className="bg-amber-500 h-screen p-5 text-white fixed left-0 top-0 duration-300 z-40 overflow-y-auto"
       >
-   
         <button
           className="absolute top-4 right-[-12px] bg-amber-700 w-7 h-7 flex items-center justify-center rounded-full"
           onClick={toggleSidebar}
@@ -43,12 +43,10 @@ const Sidebar = () => {
           {isOpen ? <FaAngleLeft /> : <FaAngleRight />}
         </button>
 
-   
         <div className={`text-2xl font-bold mb-8 ${!isOpen && "text-center"}`}>
           {isOpen ? "PetIQ" : "PQ"}
         </div>
 
- 
         <ul className="space-y-3 mt-12">
           {links.map((link, index) => (
             <NavLink
@@ -62,8 +60,6 @@ const Sidebar = () => {
           ))}
         </ul>
       </motion.div>
-
-
     </div>
   );
 };
