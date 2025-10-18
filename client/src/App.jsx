@@ -17,7 +17,7 @@ import Profile from "./pages/profile";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import Sidebar from "./components/Sidebar";
+import Sidebar from "./components/sidebar";
 import Cart from "./components/Cart";
 import Employees from "./admin/Employees";
 
@@ -37,7 +37,6 @@ import AdminCards from "./Features/Payment/AdminCards";
 import AdminAddresses from "./Features/Delivery/AdminAddresses";
 
 import VetDashboard from "./Features/medicalRecords/vetDashboard";
-
 
 const AdminLayout = () => {
   const { isOpen } = useSidebar();
@@ -75,54 +74,50 @@ function App() {
           <Router>
             <Navbar />
             <Routes>
-          
-          <Route path="/" element={<Home />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/login" element={<Login /> } />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/profile" element={ <Profile />} />
-          
-          <Route path="/services"element={<Services />} />
-          <Route path="/products" element={<AllProducts />} />
-          <Route path="/product/:id" element={<ProductProfile />} />
-          <Route path="/checkout" element={<Checkout />} />
+              <Route path="/" element={<Home />} />
+              <Route path="/home" element={<Home />} />
+              <Route path="/login" element={<Login /> } />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/profile" element={ <Profile />} />
+              
+              <Route path="/services"element={<Services />} />
+              <Route path="/products" element={<AllProducts />} />
+              <Route path="/product/:id" element={<ProductProfile />} />
+              <Route path="/checkout" element={<Checkout />} />
 
+              <Route path="/payment" element={
+                <Elements stripe={stripePromise}>
+                  <PaymentPage />
+                </Elements>
+              } />
+              <Route path="/delivery" element={<DeliveryPage />} />
+              
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route path="userlist" element={<Employees />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="products" element={<ProductDashboard />} />
+                <Route path="products/list" element={<ProductList />} />
+                <Route path="products/add" element={<ProductAdd />} />
+                <Route path="payments" element={<AdminPayments/>}/>
+                <Route path="cards" element={<AdminCards />} />
+                {/* Existing address route */}
+                <Route path="addresses" element={<AdminAddresses />} />
+                {/* NEW: Delivery Details route used by the sidebar */}
+                <Route path="delivery-details" element={<AdminAddresses />} />
 
-           <Route path="/payment" element={
-              <Elements stripe={stripePromise}>
-                <PaymentPage />
-              </Elements>
-            } />
-          <Route path="/delivery" element={<DeliveryPage />} />
-          
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route path="userlist" element={<Employees />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="products" element={<ProductDashboard />} />
-            <Route path="products/list" element={<ProductList />} />
-            <Route path="products/add" element={<ProductAdd />} />
-            <Route path="payments" element={<AdminPayments/>}/>
-            <Route path="cards" element={<AdminCards />} />
-            <Route path="addresses" element={<AdminAddresses />} />
+                <Route path="appointments" element={<AppointmentList />} />
+                <Route path="medical-records" element={<VetDashboard />} />
+              </Route>
 
-            <Route path="appointments" element={<AppointmentList />} />
-            <Route path="medical-records" element={<VetDashboard />} />
-          </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-
-
-          
-
-
-          <Route path="/appointmentAdd" element={<AppointmentAdd />} />
-          <Route path="/appointmentList" element={<AppointmentList />} />
-
-        </Routes>
-        <ConditionalFooter />
-        <Cart />
-      </Router>
-        <ToastContainer position="top-right" autoClose={3000} />
+              <Route path="/appointmentAdd" element={<AppointmentAdd />} />
+              <Route path="/appointmentList" element={<AppointmentList />} />
+            </Routes>
+            <ConditionalFooter />
+            <Cart />
+          </Router>
+          <ToastContainer position="top-right" autoClose={3000} />
         </SidebarProvider>
       </CartProvider>
     </AuthProvider>
