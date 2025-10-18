@@ -212,7 +212,7 @@ export default function DeliveryPage() {
   const formatAddressOneLine = (a) =>
     [a.line1, a.line2, a.city, a.state, a.postalCode, a.country].filter(Boolean).join(", ");
 
-  // ---- slider under Summary
+  
   const deliveryImages = ["/images/vmsp7.webp", "/images/vmsp8.webp"];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   useEffect(() => setCurrentImageIndex(0), []);
@@ -293,7 +293,7 @@ export default function DeliveryPage() {
                       }`}
                     >
                       <div className={`${GRID_TEMPLATE} items-center`}>
-                        {/* Radio */}
+                        
                         <div className="flex items-center">
                           <button
                             type="button"
@@ -312,16 +312,16 @@ export default function DeliveryPage() {
                           </button>
                         </div>
 
-                        {/* Address */}
+                        
                         <div className="text-gray-900">{formatAddressOneLine(a)}</div>
 
-                        {/* Contact */}
+                        
                         <div className="text-gray-900">{contactNameOf(a)}</div>
 
-                        {/* Phone */}
+                        
                         <div className="text-gray-900 whitespace-nowrap">{a.phone}</div>
 
-                        {/* Actions */}
+                        
                         <div className="flex items-center justify-end gap-3">
                           <button
                             type="button"
@@ -349,7 +349,7 @@ export default function DeliveryPage() {
               )}
             </div>
 
-            {/* Add row OR limit notice */}
+            
             <div className="px-6 pb-6">
               {atLimit ? (
                 <div className="w-full rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
@@ -389,7 +389,7 @@ export default function DeliveryPage() {
           </button>
         </div>
 
-        {/* RIGHT – Summary + slider */}
+        
         <div className="p-8 lg:p-12 border-t lg:border-t-0 lg:border-l border-gray-300">
           <div className="border border-gray-500 rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Summary</h2>
@@ -430,7 +430,7 @@ export default function DeliveryPage() {
         </div>
       </div>
 
-      {/* Add/Edit modal */}
+    
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowForm(false)} />
@@ -558,7 +558,7 @@ export default function DeliveryPage() {
         </div>
       )}
 
-      {/* DELETE CONFIRM MODAL */}
+      
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmDeleteId("")} />
