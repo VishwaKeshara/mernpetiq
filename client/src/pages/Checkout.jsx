@@ -4,7 +4,6 @@ import { FaShoppingCart } from "react-icons/fa";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
 
-// Address/province constants
 const API_BASE = "http://localhost:5000";
 const USER_ID = "guest";
 const PROVINCES = [
@@ -32,10 +31,10 @@ function inputCls(hasError) {
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { cartItems, getCartTotals, clearCart } = useCart();
+  const { cartItems, getCartTotals } = useCart();
   const { totalItems, totalPrice } = getCartTotals();
 
-  // Delivery address UI state/logic from DeliveryPage.jsx
+  
   const [addresses, setAddresses] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError] = useState("");
@@ -57,7 +56,7 @@ export default function Checkout() {
   const [serverNotice, setServerNotice] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState("");
 
-  // Delivery images
+  
   const deliveryImages = ["/images/vmsp7.webp", "/images/vmsp8.webp"];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   useEffect(() => setCurrentImageIndex(0), []);
@@ -67,7 +66,7 @@ export default function Checkout() {
     return () => clearInterval(id);
   }, [deliveryImages.length]);
 
-  // Address fetch
+
   async function loadAddresses() {
     setLoadingList(true);
     setListError("");
@@ -87,7 +86,7 @@ export default function Checkout() {
   }
   useEffect(() => { loadAddresses(); }, []);
 
-  // Address Form helpers
+  
   const preventDigitsKey = (e) => { if (/\d/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) e.preventDefault(); };
   const setLettersOnly = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value.replace(/[0-9]/g, "") }));
   const setDigitsOnly = (key, maxLen) => (e) => setForm((f) => ({ ...f, [key]: e.target.value.replace(/\D/g, "").slice(0, maxLen || 99) }));
@@ -189,7 +188,63 @@ export default function Checkout() {
   function contactNameOf(a) { return [a.firstName, a.lastName].filter(Boolean).join(" ").trim() || "—"; }
   function formatAddressOneLine(a) { return [a.line1, a.line2, a.city, a.state, a.postalCode, a.country].filter(Boolean).join(", "); }
 
-  // If cart is empty, show empty
+  
+  function handleUseThisAddress() {
+    if (!selectedId) return;
+    const sel = addresses.find((a) => a._id === selectedId);
+    if (!sel) {
+      alert("Please select a delivery address.");
+      return;
+    }
+
+    
+    const snapshot = {
+      firstName: sel.firstName || "",
+      lastName: sel.lastName || "",
+      phone: sel.phone || "",
+      line1: sel.line1 || "",
+      line2: sel.line2 || "",
+      city: sel.city || "",
+      state: sel.state || "",
+      postalCode: sel.postalCode || "",
+      country: sel.country || "Sri Lanka",
+    };
+
+    
+    try {
+      localStorage.setItem("invoice:lastDeliverySnapshot", JSON.stringify(snapshot));
+      localStorage.setItem("selectedAddress", JSON.stringify(snapshot));
+      localStorage.setItem("mart:selectedAddress", JSON.stringify(snapshot));
+      localStorage.setItem("address:selected_json", JSON.stringify(snapshot));
+      localStorage.setItem("address:selected_id", selectedId);
+      localStorage.setItem("vms:selectedAddressId", selectedId);
+      
+      window.__LAST_DELIVERY__ = snapshot;
+    } catch {}
+
+    
+    const qs = new URLSearchParams();
+    qs.set("total", String(totalPrice));
+    qs.set("purpose", "Mart");
+    qs.set("selectedAddressId", selectedId);
+    qs.set("currency", "LKR");
+    qs.set("step", "review");
+    qs.set("mode", "add");
+
+    qs.set("firstName", snapshot.firstName);
+    qs.set("lastName", snapshot.lastName);
+    qs.set("phone", snapshot.phone);
+    qs.set("line1", snapshot.line1);
+    if (snapshot.line2) qs.set("line2", snapshot.line2);
+    qs.set("city", snapshot.city);
+    qs.set("state", snapshot.state);
+    if (snapshot.postalCode) qs.set("postalCode", snapshot.postalCode);
+    qs.set("country", snapshot.country);
+
+    navigate(`/payment?${qs.toString()}`);
+  }
+
+  
   if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -207,11 +262,11 @@ export default function Checkout() {
     );
   }
 
-  // ----------- Main UI -----------
+  
   const GRID_TEMPLATE =
     "grid grid-cols-[40px_minmax(0,2.2fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_minmax(0,0.6fr)] gap-x-6";
 
-  // SVG Icons
+  
   const TruckIcon = (
     <svg viewBox="0 0 24 24" className="h-5 w-5 text-emerald-800" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v7" />
@@ -235,7 +290,7 @@ export default function Checkout() {
   return (
     <div className="min-h-screen bg-white">
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] min-h-screen">
-        {/* LEFT – Delivery Details */}
+        
         <div className="p-8 lg:p-12 flex flex-col">
           <motion.button
             initial={{ opacity: 0, x: -20 }}
@@ -259,7 +314,7 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* Address Management */}
+          
           <div className="mt-6 border rounded-lg border-gray-300">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold">Your Delivery Details</h3>
@@ -285,7 +340,7 @@ export default function Checkout() {
                       }`}
                     >
                       <div className={`${GRID_TEMPLATE} items-center`}>
-                        {/* Radio */}
+                      
                         <div className="flex items-center">
                           <button
                             type="button"
@@ -303,13 +358,13 @@ export default function Checkout() {
                             />
                           </button>
                         </div>
-                        {/* Address */}
+                        
                         <div className="text-gray-900">{formatAddressOneLine(a)}</div>
-                        {/* Contact */}
+                        
                         <div className="text-gray-900">{contactNameOf(a)}</div>
-                        {/* Phone */}
+                      
                         <div className="text-gray-900 whitespace-nowrap">{a.phone}</div>
-                        {/* Actions */}
+                        
                         <div className="flex items-center justify-end gap-3">
                           <button
                             type="button"
@@ -336,7 +391,7 @@ export default function Checkout() {
                 })
               )}
             </div>
-            {/* Add row OR limit notice */}
+            
             <div className="px-6 pb-6">
               {atLimit ? (
                 <div className="w-full rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
@@ -362,17 +417,10 @@ export default function Checkout() {
             </div>
           </div>
 
-          {/* Use Address Button */}
+          
           <button
             type="button"
-            onClick={() => {
-  const qs = new URLSearchParams();
-  qs.set("total", totalPrice);
-  qs.set("purpose", "Mart");
-  qs.set("selectedAddressId", selectedId);
-  qs.set("currency", "LKR");
-  navigate(`/payment?total=${totalPrice}&purpose=Mart&selectedAddressId=${selectedId}&currency=LKR&step=review&mode=add`);
-}}
+            onClick={handleUseThisAddress}
             disabled={!selectedId}
             className={`mt-6 w-full rounded-full font-semibold py-3 ${
               selectedId
@@ -384,7 +432,7 @@ export default function Checkout() {
           </button>
         </div>
 
-        {/* RIGHT – Order Summary & delivery images */}
+        
         <div className="p-8 lg:p-12 border-t lg:border-t-0 lg:border-l border-gray-300">
           <div className="bg-white rounded-2xl shadow-lg p-6 h-fit">
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
@@ -447,7 +495,7 @@ export default function Checkout() {
         </div>
       </div>
 
-      {/* Add/Edit modal */}
+    
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowForm(false)} />
@@ -564,7 +612,7 @@ export default function Checkout() {
           </div>
         </div>
       )}
-      {/* DELETE CONFIRM MODAL */}
+      
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmDeleteId("")} />
