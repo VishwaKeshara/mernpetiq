@@ -1,6 +1,4 @@
-import React from "react";
-import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import {
   FaPaw,
   FaCalendarAlt,
@@ -8,7 +6,12 @@ import {
   FaBoxOpen,
   FaArrowUp,
   FaArrowDown,
+  FaUsers,
+  FaUserCheck,
+  FaUserTimes,
 } from "react-icons/fa";
+import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 import {
   LineChart,
   Line,
@@ -25,11 +28,12 @@ import {
 } from "recharts";
 
 
-const metrics = [
+// Dynamic metrics will be set based on real data
+const getMetrics = (employeeStats) => [
+  { name: "Total Employees", value: employeeStats.total || 0, delta: 0, icon: <FaUsers /> },
+  { name: "Active Staff", value: employeeStats.active || 0, delta: 0, icon: <FaUserCheck /> },
+  { name: "Inactive Staff", value: employeeStats.inactive || 0, delta: 0, icon: <FaUserTimes /> },
   { name: "Total Pets", value: 324, delta: +12, icon: <FaPaw /> },
-  { name: "Appts Today", value: 18, delta: -3, icon: <FaCalendarAlt /> },
-  { name: "Revenue", value: "$4,280", delta: +7, icon: <FaDollarSign /> },
-  { name: "Low Stock", value: 6, delta: 0, icon: <FaBoxOpen /> },
 ];
 
 const appointmentsTrend = [
@@ -76,7 +80,49 @@ const cardVariants = {
 };
 
 export default function Dashboard() {
-  const navigate = useNavigate();
+  const [employeeStats, setEmployeeStats] = useState({ total: 0, active: 0, inactive: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const { user, token } = useAuth();
+
+  useEffect(() => {
+    fetchEmployeeStats();
+  }, []);
+
+  const fetchEmployeeStats = async () => {
+    try {
+      setLoading(true);
+      if (!token) {
+        setError("Please login to view dashboard");
+        return;
+      }
+
+      const response = await axios.get("http://localhost:3000/api/admin/all", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.data.success) {
+        const stats = {
+          total: response.data.data.total || 0,
+          active: response.data.data.active || 0,
+          inactive: response.data.data.inactive || 0
+        };
+        setEmployeeStats(stats);
+        setError("");
+      } else {
+        setError(response.data.message || "Failed to fetch employee data");
+      }
+    } catch (error) {
+      console.error("Error fetching employee stats:", error);
+      setError("Failed to fetch employee data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const metrics = getMetrics(employeeStats);
 
   return (
     <div className="p-6 md:p-8 space-y-8 bg-amber-50 min-h-screen">
@@ -84,48 +130,69 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Welcome back 👋</h1>
-          <p className="text-gray-600">Here’s what’s happening at your clinic today.</p>
+          <p className="text-gray-600">Here's what's happening at your clinic today.</p>
+          {error && (
+            <div className="mt-2 p-2 bg-red-100 text-red-600 rounded text-sm">
+              {error}
+            </div>
+          )}
         </div>
-        <motion.button
-          onClick={() => navigate("/services")}
-          whileTap={{ scale: 0.98 }}
-          whileHover={{ scale: 1.02 }}
+        <button
+          
+          
           className="px-4 py-2 rounded-2xl bg-amber-500 text-white shadow hover:shadow-md"
         >
           New Appointment
-        </motion.button>
+        </button>
       </div>
 
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {metrics.map((m, i) => (
-          <motion.div
-            key={m.name}
-            custom={i}
-            initial="hidden"
-            animate="visible"
-            variants={cardVariants}
-            className="rounded-2xl bg-white shadow-sm p-4 flex items-center gap-4 border border-amber-100 hover:shadow-md transition"
-          >
-            <div className="text-amber-600 text-3xl bg-amber-50 p-3 rounded-xl">
-              {m.icon}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm text-gray-500">{m.name}</p>
-              <p className="text-2xl font-semibold text-gray-900">{m.value}</p>
-              <div className={`flex items-center gap-1 text-sm ${m.delta > 0 ? "text-green-600" : m.delta < 0 ? "text-red-600" : "text-gray-500"}`}>
-                {m.delta > 0 ? <FaArrowUp /> : m.delta < 0 ? <FaArrowDown /> : null}
-                <span>{m.delta > 0 ? `+${m.delta}%` : m.delta < 0 ? `${m.delta}%` : "—"} this week</span>
+        {loading ? (
+          // Loading skeleton
+          Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-2xl bg-white shadow-sm p-4 flex items-center gap-4 border border-amber-100 animate-pulse"
+            >
+              <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+              <div className="flex-1">
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-20"></div>
               </div>
             </div>
-          </motion.div>
-        ))}
+          ))
+        ) : (
+          metrics.map((m, i) => (
+            <div
+              key={m.name}
+              custom={i}
+              initial="hidden"
+              animate="visible"
+              
+              className="rounded-2xl bg-white shadow-sm p-4 flex items-center gap-4 border border-amber-100 hover:shadow-md transition"
+            >
+              <div className="text-amber-600 text-3xl bg-amber-50 p-3 rounded-xl">
+                {m.icon}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-500">{m.name}</p>
+                <p className="text-2xl font-semibold text-gray-900">{m.value}</p>
+                <div className={`flex items-center gap-1 text-sm ${m.delta > 0 ? "text-green-600" : m.delta < 0 ? "text-red-600" : "text-gray-500"}`}>
+                  {m.delta > 0 ? <FaArrowUp /> : m.delta < 0 ? <FaArrowDown /> : null}
+                  <span>{m.delta > 0 ? `+${m.delta}%` : m.delta < 0 ? `${m.delta}%` : "—"} this week</span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
+        <div    className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900">Appointments (Last 7 days)</h3>
             <span className="text-xs text-gray-500">live</span>
@@ -141,9 +208,9 @@ export default function Dashboard() {
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
+        <div    className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900">Revenue by Service (LKR)</h3>
             <span className="text-xs text-gray-500">this week</span>
@@ -159,10 +226,10 @@ export default function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </motion.div>
+        </div>
 
        
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
+        <div    className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900">Patient Species Mix</h3>
             <span className="text-xs text-gray-500">clinic-wide</span>
@@ -179,13 +246,13 @@ export default function Dashboard() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </motion.div>
+        </div>
       </div>
 
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
  
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
+        <div    className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900">Upcoming Appointments</h3>
             <button className="text-amber-600 text-sm hover:underline">View all</button>
@@ -206,10 +273,10 @@ export default function Dashboard() {
               </li>
             ))}
           </ul>
-        </motion.div>
+        </div>
 
     
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
+        <div    className="rounded-2xl bg-white shadow-sm p-4 border border-amber-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900">Low Stock Alerts</h3>
             <button className="text-amber-600 text-sm hover:underline">Manage</button>
@@ -227,7 +294,7 @@ export default function Dashboard() {
               </li>
             ))}
           </ul>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

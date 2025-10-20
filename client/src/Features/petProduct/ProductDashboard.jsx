@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { FaBoxOpen, FaPlus, FaDollarSign, FaWarehouse } from "react-icons/fa";
 import { productBaseURL } from "../../axiosinstance.js";
@@ -105,70 +104,70 @@ function ProductDashboard() {
   }
 
   return (
-    <motion.div
+    <div
       className="w-full min-h-screen bg-gradient-to-br from-gray-50 via-amber-50/30 to-gray-50 px-5 py-6"
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      
+      
+      
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <motion.h2
+          <h2
             className="text-3xl font-bold text-gray-800 mb-2"
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
+            
+            
+            
           >
             Product Management
-          </motion.h2>
-          <motion.p
+          </h2>
+          <p
             className="text-gray-600"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
+            
+            
+            
           >
             Monitor and manage your product inventory
-          </motion.p>
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          <motion.button
+          <button
             onClick={() => navigate("/admin/products/add")}
             className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center gap-2 font-semibold"
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            initial={{ opacity: 0, x: 8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
+            
+            
+            
+            
+            
           >
             <FaPlus className="text-lg" />
             Add New Product
-          </motion.button>
-          <motion.button
+          </button>
+          <button
             onClick={() => navigate("/admin/products/list")}
             className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center gap-2 font-semibold"
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            initial={{ opacity: 0, x: 8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
+            
+            
+            
+            
+            
           >
             <FaBoxOpen className="text-lg" />
             View All Products
-          </motion.button>
+          </button>
         </div>
       </div>
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {statCards.map((card, index) => (
-          <motion.div
+          <div
             key={index}
             className="relative bg-white rounded-xl shadow-lg p-6 overflow-hidden group hover:shadow-xl transition-all duration-300"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 * (index + 1) }}
-            whileHover={{ scale: 1.05, y: -5 }}
+            
+            
+            
+            
           >
             {/* Gradient Background Effect */}
             <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
@@ -187,17 +186,17 @@ function ProductDashboard() {
 
             {/* Bottom accent line */}
             <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${card.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300`}></div>
-          </motion.div>
+          </div>
         ))}
       </div>
 
       {/* Recent Products */}
       {recentProducts.length > 0 && (
-        <motion.div
+        <div
           className="bg-white rounded-xl shadow-lg p-6 border border-gray-100"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
+          
+          
+          
         >
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -215,13 +214,13 @@ function ProductDashboard() {
           
           <div className="space-y-3">
             {recentProducts.map((product, index) => (
-              <motion.div
+              <div
                 key={product._id}
                 className="flex items-center justify-between p-4 border-2 border-gray-100 rounded-xl hover:border-amber-200 hover:bg-amber-50 transition-all duration-200 cursor-pointer group"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.9 + (index * 0.1) }}
-                whileHover={{ x: 4 }}
+                
+                
+                
+                
                 onClick={() => navigate("/admin/products/list")}
               >
                 <div className="flex items-center gap-4">
@@ -272,12 +271,12 @@ function ProductDashboard() {
                     })}
                   </p>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.div>
+        </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 

@@ -56,7 +56,7 @@ export const createProduct = async (req , res) => {
 // Update Product
 export const updateProduct = async (req , res) => {
     const { id } = req.params; // get product id from url
-    // console.log("id: ", id); check if we are getting the id
+    // console.log("id: ", id); check if getting the id
     
     const product = req.body; // updated fields sent by client 
 
@@ -78,7 +78,7 @@ export const updateProduct = async (req , res) => {
 // Delete Product
 export const deleteProduct = async (req , res) => {
     const {id} = req.params;
-    // console.log("id: ", id); just to check if we are getting the id
+    // console.log("id: ", id); just to check if getting the id
 
     if(!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(404).json({ success: false, message: "Invalid Product Id" });
@@ -93,4 +93,4 @@ export const deleteProduct = async (req , res) => {
         res.status(500).json({ success: false, message: "Server Error" });
     }
 
-};
+};  

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaShoppingCart, FaArrowLeft, FaTag, FaWarehouse, FaCalendar } from "react-icons/fa";
 import { productBaseURL } from "../axiosinstance";
@@ -79,22 +78,22 @@ function ProductProfile() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
         {/* Back Button */}
-        <motion.button
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+        <button
+          
+          
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-gray-600 hover:text-yellow-600 mb-6 font-medium transition-colors duration-200"
         >
           <FaArrowLeft />
           Back to Products
-        </motion.button>
+        </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Product Image */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
+          <div
+            
+            
+            
             className="bg-white rounded-2xl shadow-lg p-6"
           >
             <div className="relative overflow-hidden rounded-xl">
@@ -112,13 +111,13 @@ function ProductProfile() {
                 </div>
               )}
             </div>
-          </motion.div>
+          </div>
 
           {/* Product Details */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
+          <div
+            
+            
+            
             className="bg-white rounded-2xl shadow-lg p-6"
           >
             <div className="space-y-6">
@@ -197,15 +196,15 @@ function ProductProfile() {
                     </div>
                   </div>
 
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <button
+                    
+                    
                     onClick={handleAddToCart}
                     className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-6 py-4 rounded-xl font-bold text-lg shadow-lg transition-all duration-200 flex items-center justify-center gap-3"
                   >
                     <FaShoppingCart size={20} />
                     Add {quantity} to Cart - Rs. {(product.price * quantity).toLocaleString()}
-                  </motion.button>
+                  </button>
                 </div>
               )}
 
@@ -221,7 +220,7 @@ function ProductProfile() {
                 </div>
               )}
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { productBaseURL } from "../../axiosinstance.js";
 import { MdDelete } from "react-icons/md";
 import { FaPen, FaSearch, FaBoxOpen, FaPlus, FaTachometerAlt, FaDownload } from "react-icons/fa";
@@ -159,38 +158,38 @@ function ProductList() {
   }
 
   return (
-    <motion.div
+    <div
       className="w-full min-h-screen bg-gradient-to-br from-gray-50 via-amber-50/30 to-gray-50 px-5 py-6"
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      
+      
+      
     >
       {/* Header */}
       <div className="mb-8">
-        <motion.h2
+        <h2
           className="text-3xl font-bold text-gray-800 mb-2"
-          initial={{ opacity: 0, x: -8 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
+          
+          
+          
         >
           All Products
-        </motion.h2>
-        <motion.p
+        </h2>
+        <p
           className="text-gray-600"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
+          
+          
+          
         >
           Browse and manage your product inventory
-        </motion.p>
+        </p>
       </div>
 
       {/* Search Bar and Action Buttons */}
-      <motion.div 
+      <div 
         className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        
+        
+        
       >
         {/* Search Bar */}
         <div className="w-full md:flex-1 md:max-w-lg">
@@ -226,41 +225,41 @@ function ProductList() {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <motion.button
+          <button
             onClick={handleDownloadPDF}
             className="flex-1 md:flex-none bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.98 }}
+            
+            
           >
             <FaDownload className="text-lg" />
             Download PDF
-          </motion.button>
-          <motion.button
+          </button>
+          <button
             onClick={() => navigate("/admin/products")}
             className="flex-1 md:flex-none bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.98 }}
+            
+            
           >
             <FaTachometerAlt className="text-lg" />
             Dashboard
-          </motion.button>
-          <motion.button
+          </button>
+          <button
             onClick={() => navigate("/admin/products/add")}
             className="flex-1 md:flex-none bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.98 }}
+            
+            
           >
             <FaPlus className="text-lg" />
             Add Product
-          </motion.button>
+          </button>
         </div>
-      </motion.div>
+      </div>
 
-      <motion.div 
+      <div 
         className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100" 
-        initial={{ opacity: 0 }} 
-        animate={{ opacity: 1 }} 
-        transition={{ delay: 0.4 }}
+         
+         
+        
       >
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -275,7 +274,7 @@ function ProductList() {
                 <th className="px-6 py-4 text-center text-sm font-bold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <motion.tbody
+            <tbody
               className="bg-white divide-y divide-gray-200"
               initial="hidden"
               animate="show"
@@ -299,13 +298,9 @@ function ProductList() {
                   </td>
                 </tr>
               ) : (
-                filteredProducts?.map((product, index) => (
-                  <motion.tr
+                filteredProducts?.map((product) => (
+                  <tr
                     key={product._id}
-                    variants={{
-                      hidden: { opacity: 0, y: 8 },
-                      show: { opacity: 1, y: 0 },
-                    }}
                     className="hover:bg-amber-50/50 transition-colors duration-200 group"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -360,51 +355,47 @@ function ProductList() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <motion.button
+                        <button
                           onClick={() => handleUpdate(product)}
                           className="inline-flex items-center gap-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors duration-200"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
                           title="Edit Product"
                         >
                           <FaPen size={12} />
                           Edit
-                        </motion.button>
-                        <motion.button
+                        </button>
+                        <button
                           onClick={() => handleDelete(product._id)}
                           className="inline-flex items-center gap-1.5 bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors duration-200"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
                           title="Delete Product"
                         >
                           <MdDelete size={14} />
                           Delete
-                        </motion.button>
+                        </button>
                       </div>
                     </td>
-                  </motion.tr>
+                  </tr>
                 ))
               )}
-            </motion.tbody>
+            </tbody>
           </table>
         </div>
-      </motion.div>
+      </div>
 
       {/* Footer Stats */}
       {filteredProducts?.length > 0 && (
-        <motion.div 
+        <div 
           className="mt-6 bg-white rounded-xl shadow-lg p-4 border border-gray-100"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          
+          
+          
         >
           <div className="text-center">
             <span className="text-sm text-gray-500">Total Products: </span>
             <span className="text-lg font-bold text-gray-800">{productList?.length || 0}</span>
           </div>
-        </motion.div>
+        </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { productBaseURL } from "../../axiosinstance.js";
 
@@ -147,37 +146,37 @@ function ProductAdd() {
   };
 
   return (
-    <motion.div
+    <div
       className="min-h-screen w-full px-5 py-6 bg-gray-50"
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      
+      
+      
     >
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <motion.h2
+          <h2
             className="text-3xl font-bold text-gray-800"
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
+            
+            
+            
           >
             {isUpdating ? "Update Product" : "Add New Product"}
-          </motion.h2>
-          <motion.button
+          </h2>
+          <button
             onClick={handleCancel}
             className="text-gray-600 hover:text-gray-800 px-6 py-3 border border-gray-300 rounded-lg transition-colors duration-200 bg-white shadow-sm"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            
+            
           >
             Back to Products
-          </motion.button>
+          </button>
         </div>
 
-        <motion.div
+        <div
           className="bg-white shadow-xl rounded-2xl overflow-hidden"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.15 }}
+          
+          
+          
         >
           <div className="p-8">
             <form onSubmit={handleSubmit} className="space-y-8">
@@ -186,10 +185,10 @@ function ProductAdd() {
                 <div className="lg:col-span-2 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Product Name */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
+                    <div
+                      
+                      
+                      
                     >
                       <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-3">
                         Product Name *
@@ -206,13 +205,13 @@ function ProductAdd() {
                         placeholder="Enter product name"
                       />
                       {errors.name && <p className="text-red-500 text-sm mt-2">{errors.name}</p>}
-                    </motion.div>
+                    </div>
 
                     {/* Category */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.25 }}
+                    <div
+                      
+                      
+                      
                     >
                       <label htmlFor="category" className="block text-sm font-semibold text-gray-700 mb-3">
                         Category
@@ -231,13 +230,13 @@ function ProductAdd() {
                           </option>
                         ))}
                       </select>
-                    </motion.div>
+                    </div>
 
                     {/* Price */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
+                    <div
+                      
+                      
+                      
                     >
                       <label htmlFor="price" className="block text-sm font-semibold text-gray-700 mb-3">
                         Price (Rs.) *
@@ -256,13 +255,13 @@ function ProductAdd() {
                         placeholder="0.00"
                       />
                       {errors.price && <p className="text-red-500 text-sm mt-2">{errors.price}</p>}
-                    </motion.div>
+                    </div>
 
                     {/* Stock */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.35 }}
+                    <div
+                      
+                      
+                      
                     >
                       <label htmlFor="stock" className="block text-sm font-semibold text-gray-700 mb-3">
                         Stock Quantity *
@@ -280,14 +279,14 @@ function ProductAdd() {
                         placeholder="0"
                       />
                       {errors.stock && <p className="text-red-500 text-sm mt-2">{errors.stock}</p>}
-                    </motion.div>
+                    </div>
                   </div>
 
                   {/* Product Description */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
+                  <div
+                    
+                    
+                    
                   >
                     <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-3">
                       Product Description *
@@ -304,13 +303,13 @@ function ProductAdd() {
                       placeholder="Enter detailed product description..."
                     />
                     {errors.description && <p className="text-red-500 text-sm mt-2">{errors.description}</p>}
-                  </motion.div>
+                  </div>
 
                   {/* Product Image URL */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.45 }}
+                  <div
+                    
+                    
+                    
                   >
                     <label htmlFor="image" className="block text-sm font-semibold text-gray-700 mb-3">
                       Product Image URL *
@@ -327,15 +326,15 @@ function ProductAdd() {
                       placeholder="https://example.com/image.jpg"
                     />
                     {errors.image && <p className="text-red-500 text-sm mt-2">{errors.image}</p>}
-                  </motion.div>
+                  </div>
                 </div>
 
                 {/* Right Column - Image Preview */}
-                <motion.div
+                <div
                   className="lg:col-span-1"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 }}
+                  
+                  
+                  
                 >
                   <div className="sticky top-6">
                     <h3 className="text-sm font-semibold text-gray-700 mb-3">Image Preview</h3>
@@ -370,15 +369,15 @@ function ProductAdd() {
                       )}
                     </div>
                   </div>
-                </motion.div>
+                </div>
               </div>
 
               {/* Submit Buttons */}
-              <motion.div
+              <div
                 className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-gray-200"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
+                
+                
+                
               >
                 <button
                   type="submit"
@@ -402,12 +401,12 @@ function ProductAdd() {
                 >
                   Cancel
                 </button>
-              </motion.div>
+              </div>
             </form>
           </div>
-        </motion.div>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

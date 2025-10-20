@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { FaShoppingCart, FaFilter, FaSearch, FaTh, FaList } from "react-icons/fa";
 import { productBaseURL } from "../axiosinstance";
@@ -94,21 +93,21 @@ function AllProducts() {
       {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-8">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+          <h1
+            
+            
             className="text-4xl font-bold text-gray-900 mb-2"
           >
             All Pet Products
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+          </h1>
+          <p
+            
+            
+            
             className="text-gray-600"
           >
             Discover our complete collection of pet products ({filteredProducts.length} products)
-          </motion.p>
+          </p>
         </div>
       </div>
 
@@ -174,23 +173,23 @@ function AllProducts() {
 
         {/* Products Grid/List */}
         {filteredProducts.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          <div
+            
+            
             className="text-center py-20"
           >
             <FaShoppingCart className="text-6xl text-gray-300 mb-4 mx-auto" />
             <h3 className="text-2xl font-semibold text-gray-600 mb-2">No Products Found</h3>
             <p className="text-gray-500">Try adjusting your search or filter criteria</p>
-          </motion.div>
+          </div>
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map((product, index) => (
-              <motion.div
+              <div
                 key={product._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                
+                
+                
                 className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 group h-[420px] flex flex-col cursor-pointer"
                 onClick={() => navigate(`/product/${product._id}`)}
               >
@@ -240,9 +239,9 @@ function AllProducts() {
                       )}
                     </div>
 
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                    <button
+                      
+                      
                       disabled={product.stock === 0}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -256,21 +255,21 @@ function AllProducts() {
                     >
                       <FaShoppingCart size={14} />
                       {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-                    </motion.button>
+                    </button>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         ) : (
           // List View
           <div className="space-y-4">
             {filteredProducts.map((product, index) => (
-              <motion.div
+              <div
                 key={product._id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
+                
+                
+                
                 className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-300 cursor-pointer"
                 onClick={() => navigate(`/product/${product._id}`)}
               >
@@ -312,9 +311,9 @@ function AllProducts() {
                   </div>
 
                   <div className="flex-shrink-0">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                    <button
+                      
+                      
                       disabled={product.stock === 0}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -328,10 +327,10 @@ function AllProducts() {
                     >
                       <FaShoppingCart size={16} />
                       {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-                    </motion.button>
+                    </button>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         )}

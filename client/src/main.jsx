@@ -5,11 +5,7 @@ import App from './App.jsx'
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 
-const pk =
-  (typeof import.meta !== "undefined" &&
-    import.meta.env &&
-    import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) ||
-  process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
+const pk = import.meta.env?.VITE_STRIPE_PUBLISHABLE_KEY;
 
 if (!pk) {
   console.warn(
