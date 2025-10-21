@@ -24,7 +24,7 @@ function Navbar() {
     }
     
     // If avatarUrl doesn't start with http, prepend the server URL
-    return avatarUrl.startsWith('http') ? avatarUrl : `http://localhost:3000${avatarUrl}`;
+    return avatarUrl.startsWith('http') ? avatarUrl : `http://localhost:5000${avatarUrl}`;
   };
 
 

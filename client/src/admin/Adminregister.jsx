@@ -51,7 +51,7 @@ const AdminRegister = () => {
 
     try {
       // Save admin data to Employee collection (for staff)
-      const response = await axios.post('http://localhost:3000/api/admin/register', {
+      const response = await axios.post('http://localhost:5000/api/admin/register', {
         name: form.name,
         email: form.email,
         password: form.password,

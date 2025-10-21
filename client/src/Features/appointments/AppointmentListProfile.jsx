@@ -4,11 +4,12 @@ import { MdDelete } from "react-icons/md";
 import { FaPen, FaSearch, FaCalendarAlt, FaPlus, FaTachometerAlt, FaDownload, FaDollarSign, FaChartLine } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-function AppointmentList() {
+function AppointmentList({ isUserProfile = false }) {
   const [appointmentList, setAppointmentList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -18,9 +19,10 @@ function AppointmentList() {
   });
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   
-  // This component is admin-only
-  const isAdminView = true;
+  // Check if accessed from admin panel
+  const isAdminView = location.pathname.includes('/admin/') && !isUserProfile;
 
   const toAmPm = (time24) => {
     if (!time24) return "";
@@ -40,7 +42,16 @@ function AppointmentList() {
       } catch {
         ({ data } = await appointmentBaseURL.get("/appointmentList"));
       }
-      const items = data?.appointmentList ?? data?.appointments ?? [];
+      let items = data?.appointmentList ?? data?.appointments ?? [];
+      
+      // Filter appointments for user profile view
+      if (isUserProfile && user) {
+        items = items.filter(appointment => 
+          appointment.ownerName?.toLowerCase() === user.name?.toLowerCase() ||
+          appointment.ownerEmail?.toLowerCase() === user.email?.toLowerCase()
+        );
+      }
+      
       setAppointmentList(items);
       
       // Calculate statistics
@@ -84,8 +95,14 @@ function AppointmentList() {
 
   const handleUpdate = (appointment) => {
     // Navigate to the add/update form with the selected appointment as state
-    // Always return to admin appointments page after update (this is admin-only component)
-    navigate(`/appointmentAdd`, { state: { ...appointment, fromAdmin: true } });
+    // Pass a flag so the form knows to return to correct page after update
+    navigate(`/appointmentAdd`, { 
+      state: { 
+        ...appointment, 
+        fromAdmin: isAdminView,
+        fromProfile: isUserProfile 
+      } 
+    });
   };
 
   const handleDownloadPDF = () => {
@@ -227,7 +244,7 @@ function AppointmentList() {
           
           
         >
-          Admin - Appointments Management
+          {isUserProfile ? "My Appointments" : "Appointments Details"}
         </h2>
         <p
           className="text-gray-600"
@@ -235,13 +252,14 @@ function AppointmentList() {
           
           
         >
-          Manage and track all pet appointments across the system
+          {isUserProfile ? "View and manage your scheduled appointments" : "Manage and track all pet appointments"}
         </p>
       </div>
 
-      {/* Statistics Cards - Always show in admin view */}
-      <div 
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8"
+      {/* Statistics Cards - Only show in admin view */}
+      {isAdminView && !isUserProfile && (
+        <div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8"
           
           
           
@@ -292,6 +310,7 @@ function AppointmentList() {
             </div>
           </div>
         </div>
+      )}
 
       {/* Search Bar and Action Buttons */}
       <div 
@@ -334,15 +353,17 @@ function AppointmentList() {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <button
-            onClick={handleDownloadPDF}
-            className="flex-1 md:flex-none bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
-            
-            
-          >
-            <FaDownload className="text-lg" />
-            Download PDF
-          </button>
+          {isAdminView && !isUserProfile && (
+            <button
+              onClick={handleDownloadPDF}
+              className="flex-1 md:flex-none bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
+              
+              
+            >
+              <FaDownload className="text-lg" />
+              Download PDF
+            </button>
+          )}
           <button
             onClick={() => navigate("/appointmentAdd")}
             className="flex-1 md:flex-none bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
@@ -350,7 +371,7 @@ function AppointmentList() {
             
           >
             <FaPlus className="text-lg" />
-            Add Appointment
+            {isUserProfile ? "Book Appointment" : "Add Appointment"}
           </button>
         </div>
       </div>
@@ -388,9 +409,16 @@ function AppointmentList() {
                   <td colSpan={7} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center justify-center text-gray-500">
                       <FaCalendarAlt className="text-4xl text-gray-300 mb-4" />
-                      <p className="text-lg font-medium">No appointments found</p>
+                      <p className="text-lg font-medium">
+                        {isUserProfile ? "No appointments found" : "No appointments found"}
+                      </p>
                       <p className="text-sm mt-1">
-                        {searchQuery ? "Try adjusting your search criteria" : "Get started by adding your first appointment"}
+                        {searchQuery 
+                          ? "Try adjusting your search criteria" 
+                          : isUserProfile 
+                            ? "Book your first appointment to get started" 
+                            : "Get started by adding your first appointment"
+                        }
                       </p>
                     </div>
                   </td>

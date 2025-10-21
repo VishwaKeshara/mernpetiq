@@ -8,7 +8,7 @@ export default function CrudTable({ title, columns }) {
 
 
   useEffect(() => {
-    axios.get("http://localhost:3000/employees")
+    axios.get("http://localhost:5000/employees")
       .then(res => setData(res.data))
       .catch(err => console.error(err));
   }, []);
@@ -20,7 +20,7 @@ export default function CrudTable({ title, columns }) {
   const handleAdd = () => {
     if (editingId) {
 
-      axios.put(`http://localhost:3000/employees/${editingId}`, form)
+      axios.put(`http://localhost:5000/employees/${editingId}`, form)
         .then(res => {
           setData(data.map(item => item._id === editingId ? res.data : item));
           setEditingId(null);
@@ -29,7 +29,7 @@ export default function CrudTable({ title, columns }) {
         .catch(err => console.error(err));
     } else {
 
-      axios.post("http://localhost:3000/employees", form)
+      axios.post("http://localhost:5000/employees", form)
         .then(res => {
           setData([...data, res.data]);
           setForm({});
@@ -44,7 +44,7 @@ export default function CrudTable({ title, columns }) {
   };
 
   const handleDelete = (id) => {
-    axios.delete(`http://localhost:3000/employees/${id}`)
+    axios.delete(`http://localhost:5000/employees/${id}`)
       .then(() => {
         setData(data.filter(item => item._id !== id));
       })

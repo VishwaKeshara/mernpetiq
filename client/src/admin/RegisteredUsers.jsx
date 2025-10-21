@@ -38,7 +38,7 @@ export default function RegisteredUsers() {
   const fetchRegisteredUsers = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:3000/api/register/all-public");
+      const response = await axios.get("http://localhost:5000/api/register/all-public");
       if (response.data.success) {
         setData(response.data.data.admins);
       } else {
@@ -63,7 +63,7 @@ export default function RegisteredUsers() {
         setError("Password is required (min 6 characters) to create a pet owner.");
         return;
       }
-      const response = await axios.post("http://localhost:3000/api/register/register", {
+      const response = await axios.post("http://localhost:5000/api/register/register", {
         name: form.name,
         email: form.email,
         password: form.password
@@ -90,7 +90,7 @@ export default function RegisteredUsers() {
         return;
       }
       const response = await axios.put(
-        `http://localhost:3000/api/register/profile/${editingId}`,
+        `http://localhost:5000/api/register/profile/${editingId}`,
         form,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -149,7 +149,7 @@ export default function RegisteredUsers() {
         return;
       }
       const response = await axios.delete(
-        `http://localhost:3000/api/register/${id}`,
+        `http://localhost:5000/api/register/${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (response.data.success) {

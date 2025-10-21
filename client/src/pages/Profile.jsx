@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { useLocation } from "react-router-dom";
+import AppointmentListProfile from "../Features/appointments/AppointmentListProfile";
 // import UserAppointments from "./components/UserAppointments"; // Component not found
 
 // Removed external placeholder URL to avoid network errors
@@ -33,11 +34,20 @@ export default function Profile() {
   // Determine if this is a pet owner (no role) or staff/admin (has role)
   const isPetOwner = !user?.role;
 
-  // Check if redirected from payment with success message
+  // Check if redirected from payment or appointment update with success message
   useEffect(() => {
     if (location.state?.paymentSuccess) {
       setActiveTab("appointments");
       setMsg(location.state.message || "Payment completed successfully!");
+      // Clear the state to prevent showing message on refresh
+      window.history.replaceState({}, document.title);
+    } else if (location.state?.activeTab === "appointments") {
+      setActiveTab("appointments");
+      if (location.state.message) {
+        setMsg(location.state.message);
+        // Clear the message after 5 seconds
+        setTimeout(() => setMsg(""), 5000);
+      }
       // Clear the state to prevent showing message on refresh
       window.history.replaceState({}, document.title);
     }
@@ -60,7 +70,7 @@ export default function Profile() {
 
     const avatarUrl = user?.avatarUrl;
     if (avatarUrl && avatarUrl !== "null" && avatarUrl !== "undefined" && avatarUrl.trim() !== "") {
-      setPreview(avatarUrl.startsWith("http") ? avatarUrl : `http://localhost:3000${avatarUrl}`);
+      setPreview(avatarUrl.startsWith("http") ? avatarUrl : `http://localhost:5000${avatarUrl}`);
     } else {
       setPreview(null);
     }
@@ -86,11 +96,11 @@ export default function Profile() {
       formData.append("avatar", file);
       const base = isPetOwner ? "register" : "admin";
       
-      console.log("Uploading to:", `http://localhost:3000/api/${base}/profile/avatar`);
+      console.log("Uploading to:", `http://localhost:5000/api/${base}/profile/avatar`);
       console.log("Authorization header:", `Bearer ${token}`);
       
       const avatarRes = await axios.put(
-        `http://localhost:3000/api/${base}/profile/avatar`,
+        `http://localhost:5000/api/${base}/profile/avatar`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -120,7 +130,7 @@ export default function Profile() {
         formData.append("avatar", fileRef.current.files[0]);
         const base = isPetOwner ? "register" : "admin";
         const avatarRes = await axios.put(
-          `http://localhost:3000/api/${base}/profile/avatar`,
+          `http://localhost:5000/api/${base}/profile/avatar`,
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -133,7 +143,7 @@ export default function Profile() {
       const base2 = isPetOwner ? "register" : "admin";
       const userId = user?._id || user?.id;
       const res = await axios.put(
-        `http://localhost:3000/api/${base2}/profile/${userId}`,
+        `http://localhost:5000/api/${base2}/profile/${userId}`,
         isPetOwner
           ? {
               name: form.name,
@@ -169,7 +179,7 @@ export default function Profile() {
     try {
       const base = isPetOwner ? "register" : "admin";
       const res = await axios.post(
-        `http://localhost:3000/api/${base}/profile/reset-password`,
+        `http://localhost:5000/api/${base}/profile/reset-password`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -191,7 +201,7 @@ export default function Profile() {
       }
       const base = isPetOwner ? "register" : "admin";
       const res = await axios.post(
-        `http://localhost:3000/api/${base}/profile/change-password`,
+        `http://localhost:5000/api/${base}/profile/change-password`,
         { currentPassword: changePwd.currentPassword, newPassword: changePwd.newPassword },
         { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
       );
@@ -213,7 +223,7 @@ export default function Profile() {
       
       const base = isPetOwner ? "register" : "admin";
       const res = await axios.delete(
-        `http://localhost:3000/api/${base}/profile/self`,
+        `http://localhost:5000/api/${base}/profile/self`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -444,9 +454,8 @@ export default function Profile() {
 
           {/* Appointments Tab Content */}
           {activeTab === "appointments" && isPetOwner && (
-            <div className="p-6 bg-white rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">My Appointments</h3>
-              <p className="text-gray-600">Appointments feature coming soon...</p>
+            <div className="bg-white rounded-lg shadow">
+              <AppointmentListProfile isUserProfile={true} />
             </div>
           )}
         </div>

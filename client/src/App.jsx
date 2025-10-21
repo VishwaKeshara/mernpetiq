@@ -9,6 +9,8 @@ import Signup from "./pages/Signup";
 import Login from "./pages/Login";      
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -84,6 +86,8 @@ function App() {
           <Route path="/login" element={<Login /> } />
           <Route path="/signup" element={<Signup />} />
           <Route path="/profile" element={ <Profile />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           {/* Admin Authentication Routes */}
           <Route path="/adminlogin" element={<Adminlogin />} />

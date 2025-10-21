@@ -87,7 +87,7 @@ function ResetPassword() {
     setMessage('');
 
     try {
-      const response = await axios.post('http://localhost:3000/api/register/reset-password', {
+      const response = await axios.post('http://localhost:5000/api/register/reset-password', {
         email: email,
         resetCode: formData.resetCode.trim(),
         newPassword: formData.newPassword

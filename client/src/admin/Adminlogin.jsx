@@ -38,7 +38,7 @@ const Adminlogin = () => {
 
     try {
       // Login admin from Employee collection
-      const response = await axios.post('http://localhost:3000/api/admin/login', {
+      const response = await axios.post('http://localhost:5000/api/admin/login', {
         email: form.email,
         password: form.password,
         role: form.role

@@ -57,7 +57,7 @@ function Login() {
     setLoading(true);
 
     try {
-      const result = await axios.post("http://localhost:3000/api/register/login", {
+      const result = await axios.post("http://localhost:5000/api/register/login", {
         email: email.trim().toLowerCase(),
         password,
       });

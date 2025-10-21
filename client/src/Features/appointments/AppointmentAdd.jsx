@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { appointmentBaseURL } from "../../axiosinstance.js";
+import { useAuth } from "../../context/AuthContext";
 import { FaCalendarAlt, FaClock, FaUser, FaPaw, FaStethoscope, FaDollarSign, FaUserMd, FaSave, FaTimes, FaExclamationTriangle } from "react-icons/fa";
 
 function AppointmentAdd() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth(); // Get user information from JWT token
   const isAdminView = location.pathname.includes('/admin/');
 
   const today = new Date();
@@ -54,6 +56,16 @@ function AppointmentAdd() {
   const [existingAppointments, setExistingAppointments] = useState([]);
   const [conflictWarning, setConflictWarning] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto-fill owner name from logged-in user
+  useEffect(() => {
+    if (user && user.name && !appointmentForm.ownerName && !isUpdating) {
+      setAppointmentForm(prev => ({
+        ...prev,
+        ownerName: user.name
+      }));
+    }
+  }, [user, isUpdating]);
 
   // Prefill when editing
   useEffect(() => {
@@ -254,11 +266,21 @@ function AppointmentAdd() {
         // Show success message with better UX
         if (isUpdating) {
           const fromAdmin = Boolean(location.state && location.state.fromAdmin);
+          const fromProfile = Boolean(location.state && location.state.fromProfile);
+          
           if (fromAdmin) {
             navigate("/admin/appointments", { 
               state: { message: "Appointment updated successfully!" }
             });
+          } else if (fromProfile) {
+            navigate("/profile", { 
+              state: { 
+                message: "Appointment updated successfully!",
+                activeTab: "appointments"
+              }
+            });
           } else {
+            // Default fallback: redirect to admin appointments list
             navigate("/appointmentList", { 
               state: { message: "Appointment updated successfully!" }
             });
@@ -389,19 +411,36 @@ function AppointmentAdd() {
                 <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
                   <FaUser className="text-yellow-500" />
                   <span>Owner Name</span>
+                  {user && appointmentForm.ownerName === user.name && (
+                    <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                      ✓ Auto-filled
+                    </span>
+                  )}
                 </label>
                 <input
                   type="text"
                   name="ownerName"
                   value={appointmentForm.ownerName}
                   onChange={handleFormChange}
-                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 bg-white/80 backdrop-blur-sm ${
-                    errors.ownerName
-                      ? "border-red-300 focus:border-red-500 focus:ring-red-200"
-                      : "border-yellow-200 focus:border-yellow-500 focus:ring-yellow-200 hover:border-yellow-300"
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 transition-all duration-300 backdrop-blur-sm ${
+                    user && appointmentForm.ownerName === user.name
+                      ? "bg-green-50/80 border-green-200 focus:border-green-500 focus:ring-green-200"
+                      : errors.ownerName
+                      ? "bg-white/80 border-red-300 focus:border-red-500 focus:ring-red-200"
+                      : "bg-white/80 border-yellow-200 focus:border-yellow-500 focus:ring-yellow-200 hover:border-yellow-300"
                   }`}
-                  placeholder="Enter owner's full name"
+                  placeholder={user ? `Logged in as: ${user.name}` : "Enter owner's full name"}
                 />
+                {user && appointmentForm.ownerName === user.name && (
+                  <p className="text-green-600 text-xs flex items-center space-x-1">
+                    <span>✓ Using your account name. You can edit this if needed.</span>
+                  </p>
+                )}
+                {!user && (
+                  <p className="text-blue-600 text-xs flex items-center space-x-1">
+                    <span>💡 Tip: <a href="/login" className="underline hover:text-blue-800">Login</a> to auto-fill your name</span>
+                  </p>
+                )}
                 {errors.ownerName && (
                   <p className="text-red-500 text-xs flex items-center space-x-1">
                     <FaExclamationTriangle />

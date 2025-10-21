@@ -157,7 +157,7 @@ function Signup() {
     setLoading(true);
 
     axios
-      .post("http://localhost:3000/api/register/register", { 
+      .post("http://localhost:5000/api/register/register", { 
         name: name.trim(), 
         email: email.trim().toLowerCase(), 
         password,

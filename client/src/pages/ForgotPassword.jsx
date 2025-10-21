@@ -28,7 +28,7 @@ function ForgotPassword() {
     setMessage('');
 
     try {
-      const response = await axios.post('http://localhost:3000/api/register/forgot-password', {
+      const response = await axios.post('http://localhost:5000/api/register/forgot-password', {
         email: email.trim().toLowerCase()
       });
 

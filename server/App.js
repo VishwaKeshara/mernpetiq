@@ -14,6 +14,8 @@ import adminRoutes from './routes/adminRoutes.js';
 import petRoutes from './routes/petRoutes.js';
 import appointmentRoutes from './routes/AppointmentRoutes.js';
 import productRoutes from './routes/ProductRoute.js';
+import medicalRecordsRoutes from './routes/medicalRecords.js';
+import paymentRoutes from './routes/PaymentRoutes.js';
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -34,7 +36,9 @@ app.use('/api/register', registerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/pets', petRoutes);
 app.use('/api/products', productRoutes);
-app.use('/appointments', appointmentRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/medical-records', medicalRecordsRoutes);
+app.use('/api', paymentRoutes);
 
 // Health check route
 app.get('/', (req, res) => {
@@ -63,7 +67,7 @@ app.use((err, req, res, next) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/petipDB';
 
 // Connect to MongoDB and start server
@@ -76,7 +80,10 @@ mongoose.connect(MONGODB_URI)
             console.log(`   - Registration: http://localhost:${PORT}/api/register`);
             console.log(`   - Admin: http://localhost:${PORT}/api/admin`);
             console.log(`   - Pets: http://localhost:${PORT}/api/pets`);
-            console.log(`   - Appointments: http://localhost:${PORT}/appointments`);
+            console.log(`   - Products: http://localhost:${PORT}/api/products`);
+            console.log(`   - Appointments: http://localhost:${PORT}/api/appointments`);
+            console.log(`   - Medical Records: http://localhost:${PORT}/api/medical-records`);
+            console.log(`   - Payments: http://localhost:${PORT}/api/payment-methods`);
             console.log(`📦 Database: Local MongoDB - petipDB`);
         });
     })
