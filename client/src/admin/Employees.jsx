@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
+import { adminBaseURL } from "../axiosinstance.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import {
   FaPlus,
@@ -57,7 +58,7 @@ export default function Employees() {
       }
 
       console.log("Making API call to /api/admin/all");
-      const response = await axios.get("http://localhost:3000/api/admin/all", {
+      const response = await adminBaseURL.get("/all", {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -90,7 +91,7 @@ export default function Employees() {
       } else if (error.response?.status === 403) {
         setError("Admin access required to view employees.");
       } else if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
-        setError("Cannot connect to server. Please ensure the backend server is running on port 3000.");
+        setError("Cannot connect to server. Please ensure the backend server is running on port 5000.");
       } else {
         setError(error.response?.data?.message || "Failed to fetch employees");
       }
@@ -111,7 +112,7 @@ export default function Employees() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post("http://localhost:3000/api/admin/register", formData, {
+      const response = await adminBaseURL.post("/register", formData, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -133,7 +134,7 @@ export default function Employees() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.put(`http://localhost:3000/api/admin/${selectedEmployee._id}`, formData, {
+      const response = await adminBaseURL.put(`/${selectedEmployee._id}`, formData, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -156,7 +157,7 @@ export default function Employees() {
     if (window.confirm("Are you sure you want to delete this employee?")) {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.delete(`http://localhost:3000/api/admin/${id}`, {
+        const response = await adminBaseURL.delete(`/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }

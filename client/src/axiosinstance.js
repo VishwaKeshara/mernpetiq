@@ -19,3 +19,8 @@ export const medicalRecordBaseURL = axios.create({
 export const paymentBaseURL = axios.create({
   baseURL: "http://localhost:5000/api",
 });
+
+// Admin/Employee management API client
+export const adminBaseURL = axios.create({
+  baseURL: "http://localhost:5000/api/admin",
+});

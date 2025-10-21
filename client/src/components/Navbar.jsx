@@ -115,7 +115,7 @@ function Navbar() {
                   user.avatarUrl 
                     ? user.avatarUrl.startsWith("http") 
                       ? user.avatarUrl 
-                      : `http://localhost:3000${user.avatarUrl}`
+                      : `http://localhost:5000${user.avatarUrl}`
                     : "/assets/default-avatar.png"
                 }
                 alt="avatar"

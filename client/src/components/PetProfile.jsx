@@ -36,7 +36,7 @@ const PetProfile = () => {
 
     const fetchPets = async (ownerId) => {
         try {
-            const response = await fetch(`http://localhost:3000/api/pets/owner/${ownerId}`);
+            const response = await fetch(`http://localhost:5000/api/pets/owner/${ownerId}`);
             const data = await response.json();
             if (data.success) {
                 setPets(data.data);
@@ -75,8 +75,8 @@ const PetProfile = () => {
 
         try {
             const url = editingPet 
-                ? `http://localhost:3000/api/pets/${editingPet._id}`
-                : 'http://localhost:3000/api/pets';
+                ? `http://localhost:5000/api/pets/${editingPet._id}`
+                : 'http://localhost:5000/api/pets';
             
             const method = editingPet ? 'PUT' : 'POST';
             
@@ -133,7 +133,7 @@ const PetProfile = () => {
     const handleDelete = async (petId) => {
         if (window.confirm('Are you sure you want to delete this pet profile?')) {
             try {
-                const response = await fetch(`http://localhost:3000/api/pets/${petId}`, {
+                const response = await fetch(`http://localhost:5000/api/pets/${petId}`, {
                     method: 'DELETE'
                 });
                 

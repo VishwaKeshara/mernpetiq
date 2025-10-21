@@ -170,7 +170,7 @@ export default function RegisteredUsers() {
         return;
       }
       const response = await axios.put(
-        `http://localhost:3000/api/register/profile/${id}`,
+        `http://localhost:5000/api/register/profile/${id}`,
         { isActive: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );

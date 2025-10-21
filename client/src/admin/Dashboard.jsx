@@ -97,7 +97,7 @@ export default function Dashboard() {
         return;
       }
 
-      const response = await axios.get("http://localhost:3000/api/admin/all", {
+      const response = await axios.get("http://localhost:5000/api/admin/all", {
         headers: {
           Authorization: `Bearer ${token}`
         }

@@ -65,7 +65,7 @@ const Sidebar = () => {
               <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
                 {user.avatarUrl ? (
                   <img 
-                    src={`http://localhost:3000${user.avatarUrl}`} 
+                    src={`http://localhost:5000${user.avatarUrl}`} 
                     alt="Profile" 
                     className="w-full h-full object-cover"
                   />

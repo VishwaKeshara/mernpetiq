@@ -68,7 +68,7 @@ export default function ProfileManagement() {
       formData.append('avatar', file);
 
       const response = await axios.put(
-        'http://localhost:3000/api/admin/profile/avatar',
+        'http://localhost:5000/api/admin/profile/avatar',
         formData,
         {
           headers: {
@@ -143,7 +143,7 @@ export default function ProfileManagement() {
       }
 
       const response = await axios.put(
-        `http://localhost:3000/api/admin/${userId}`,
+        `http://localhost:5000/api/admin/${userId}`,
         {
           name: formData.name.trim(),
           email: formData.email.trim().toLowerCase()
@@ -224,7 +224,7 @@ export default function ProfileManagement() {
               <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden mx-auto">
                 {formData.avatarUrl ? (
                   <img 
-                    src={`http://localhost:3000${formData.avatarUrl}`} 
+                    src={`http://localhost:5000${formData.avatarUrl}`} 
                     alt="Profile" 
                     className="w-full h-full object-cover"
                   />

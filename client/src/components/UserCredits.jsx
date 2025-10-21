@@ -34,12 +34,12 @@ const UserCredits = () => {
       }
 
       // Fetch all credits for the user
-      const allCreditsResponse = await axios.get(`http://localhost:3000/api/credits/owner/${user._id}`, {
+      const allCreditsResponse = await axios.get(`http://localhost:5000/api/credits/owner/${user._id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       // Fetch available credits for the user
-      const availableCreditsResponse = await axios.get(`http://localhost:3000/api/credits/owner/${user._id}/available`, {
+      const availableCreditsResponse = await axios.get(`http://localhost:5000/api/credits/owner/${user._id}/available`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
