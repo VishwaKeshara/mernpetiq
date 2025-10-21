@@ -1,4 +1,4 @@
-const Address = require("../Model/AddressModel");
+import Address from "../Model/AddressModel.js";
 
 // Constants
 const PROVINCES = [
@@ -36,17 +36,20 @@ function validate(body) {
 }
 
 // Controller functions
-const getAddresses = async (req, res) => {
+export const getAddresses = async (req, res) => {
   try {
+    console.log("getAddresses controller called with userId:", req.query.userId);
     const userId = String(req.query.userId || "guest");
     const docs = await Address.find({ userId }).sort({ createdAt: 1 });
+    console.log(`Found ${docs.length} addresses for user ${userId}`);
     res.json(docs);
   } catch (e) {
+    console.error("Error in getAddresses:", e);
     res.status(500).json({ error: "SERVER_ERROR", message: e.message });
   }
 };
 
-const createAddress = async (req, res) => {
+export const createAddress = async (req, res) => {
   try {
     const userId = String(req.body.userId || "guest");
     const { ok, errors } = validate(req.body);
@@ -79,7 +82,7 @@ const createAddress = async (req, res) => {
   }
 };
 
-const updateAddress = async (req, res) => {
+export const updateAddress = async (req, res) => {
   try {
     const id = req.params.id;
     const userId = String(req.body.userId || "guest");
@@ -111,7 +114,7 @@ const updateAddress = async (req, res) => {
   }
 };
 
-const deleteAddress = async (req, res) => {
+export const deleteAddress = async (req, res) => {
   try {
     const id = req.params.id;
     const userId = String(req.query.userId || req.body.userId || "guest");
@@ -122,9 +125,3 @@ const deleteAddress = async (req, res) => {
     res.status(500).json({ error: "SERVER_ERROR", message: e.message });
   }
 };
-
-//Export all functions  
-exports.getAddresses = getAddresses;
-exports.createAddress = createAddress;
-exports.updateAddress = updateAddress;
-exports.deleteAddress = deleteAddress;

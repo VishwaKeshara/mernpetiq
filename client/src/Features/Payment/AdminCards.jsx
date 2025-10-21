@@ -1,6 +1,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
-import { paymentBaseURL } from "../../axiosinstance.js";
+
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
+
 
 export default function AdminCards() {
   const [cards, setCards] = useState([]);
@@ -11,8 +13,8 @@ export default function AdminCards() {
     setLoading(true);
     setErr("");
     try {
-      const response = await paymentBaseURL.get("/db/cards");
-      const data = response.data;
+      const res = await fetch(`${API_BASE}/api/db/cards`);
+      const data = await res.json();
       if (!Array.isArray(data)) throw new Error("Unexpected server response");
       setCards(data);
     } catch (e) {

@@ -1,9 +1,9 @@
-const express = require("express");
+import express from "express";
+import { getAdminAddresses } from "../Controllers/AdminAddressControllers.js";
+
 const router = express.Router();
-//Insert Admin Address Controller
-const AdminAddressController = require("../Controllers/AdminAddressControllers");
 
-//Routes
-router.get("/api/admin/addresses", AdminAddressController.getAdminAddresses);
 
-module.exports = router;
+router.get("/api/admin/addresses", getAdminAddresses);
+
+export default router;

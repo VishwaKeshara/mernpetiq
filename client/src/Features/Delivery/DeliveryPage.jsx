@@ -1,8 +1,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-const API_BASE = "http://localhost:4242";
+const API_BASE = "http://localhost:5000";
 const USER_ID = "guest"; 
 
 const PROVINCES = [
@@ -12,10 +12,6 @@ const PROVINCES = [
 
 export default function DeliveryPage() {
   const navigate = useNavigate();
-  // const location = useLocation();
-
-  // Get appointment data from navigation state (currently unused)
-  // const appointmentData = location.state?.appointment;
 
   
   const params = new URLSearchParams(window.location.search);
@@ -58,14 +54,17 @@ export default function DeliveryPage() {
     setLoadingList(true);
     setListError("");
     try {
+      console.log("Fetching addresses from:", `${API_BASE}/api/addresses?userId=${encodeURIComponent(USER_ID)}`);
       const res = await fetch(`${API_BASE}/api/addresses?userId=${encodeURIComponent(USER_ID)}`);
       if (!res.ok) throw new Error(`Failed to load: ${res.status}`);
       const data = await res.json();
+      console.log("Addresses loaded:", data);
       setAddresses(Array.isArray(data) ? data : []);
       if (selectedId && !data.find((a) => a._id === selectedId)) {
         setSelectedId("");
       }
     } catch (e) {
+      console.error("Error loading addresses:", e);
       setListError(e.message || "Failed to load addresses");
     } finally {
       setLoadingList(false);
@@ -142,39 +141,44 @@ export default function DeliveryPage() {
 
     setSaving(true);
     try {
+      console.log("Saving address form:", form);
       if (editingId) {
         const res = await fetch(`${API_BASE}/api/addresses/${editingId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId: USER_ID, ...form }),
         });
+        const data = await res.json().catch(() => ({}));
+        console.log("Update address response:", { status: res.status, data });
+        
         if (res.status === 400) {
-          const data = await res.json();
           setErrors(data.errors || {});
           return;
         }
-        if (!res.ok) throw new Error(`Update failed (${res.status})`);
+        if (!res.ok) throw new Error(`Update failed (${res.status}): ${data.message || ''}`);
       } else {
         const res = await fetch(`${API_BASE}/api/addresses`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId: USER_ID, ...form }),
         });
+        const data = await res.json().catch(() => ({}));
+        console.log("Create address response:", { status: res.status, data });
+        
         if (res.status === 409) {
-          const data = await res.json();
           setServerNotice(data.message || "You can only add up to 3 delivery addresses.");
           return;
         }
         if (res.status === 400) {
-          const data = await res.json();
           setErrors(data.errors || {});
           return;
         }
-        if (!res.ok) throw new Error(`Create failed (${res.status})`);
+        if (!res.ok) throw new Error(`Create failed (${res.status}): ${data.message || ''}`);
       }
       setShowForm(false);
       await loadAddresses();
     } catch (err) {
+      console.error("Error saving address:", err);
       setServerNotice(err.message || "Save failed");
     } finally {
       setSaving(false);
@@ -183,14 +187,21 @@ export default function DeliveryPage() {
 
   async function removeAddress(id) {
     try {
+      console.log("Deleting address:", id);
       const res = await fetch(
         `${API_BASE}/api/addresses/${id}?userId=${encodeURIComponent(USER_ID)}`,
         { method: "DELETE" }
       );
-      if (!res.ok) throw new Error(`Delete failed (${res.status})`);
+      
+      const data = await res.json().catch(() => ({}));
+      console.log("Delete address response:", { status: res.status, data });
+      
+      if (!res.ok) throw new Error(`Delete failed (${res.status}): ${data.message || ''}`);
+      
       if (selectedId === id) setSelectedId("");
       await loadAddresses();
     } catch (e) {
+      console.error("Error deleting address:", e);
       alert(e.message || "Failed to delete");
     } finally {
       setConfirmDeleteId(""); 
@@ -216,7 +227,7 @@ export default function DeliveryPage() {
   const formatAddressOneLine = (a) =>
     [a.line1, a.line2, a.city, a.state, a.postalCode, a.country].filter(Boolean).join(", ");
 
-  // ---- slider under Summary
+  
   const deliveryImages = ["/images/vmsp7.webp", "/images/vmsp8.webp"];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   useEffect(() => setCurrentImageIndex(0), []);
@@ -297,7 +308,7 @@ export default function DeliveryPage() {
                       }`}
                     >
                       <div className={`${GRID_TEMPLATE} items-center`}>
-                        {/* Radio */}
+                        
                         <div className="flex items-center">
                           <button
                             type="button"
@@ -316,16 +327,16 @@ export default function DeliveryPage() {
                           </button>
                         </div>
 
-                        {/* Address */}
+                        
                         <div className="text-gray-900">{formatAddressOneLine(a)}</div>
 
-                        {/* Contact */}
+                        
                         <div className="text-gray-900">{contactNameOf(a)}</div>
 
-                        {/* Phone */}
+                        
                         <div className="text-gray-900 whitespace-nowrap">{a.phone}</div>
 
-                        {/* Actions */}
+                        
                         <div className="flex items-center justify-end gap-3">
                           <button
                             type="button"
@@ -353,7 +364,7 @@ export default function DeliveryPage() {
               )}
             </div>
 
-            {/* Add row OR limit notice */}
+            
             <div className="px-6 pb-6">
               {atLimit ? (
                 <div className="w-full rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
@@ -393,7 +404,7 @@ export default function DeliveryPage() {
           </button>
         </div>
 
-        {/* RIGHT – Summary + slider */}
+        
         <div className="p-8 lg:p-12 border-t lg:border-t-0 lg:border-l border-gray-300">
           <div className="border border-gray-500 rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Summary</h2>
@@ -434,7 +445,7 @@ export default function DeliveryPage() {
         </div>
       </div>
 
-      {/* Add/Edit modal */}
+    
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowForm(false)} />
@@ -562,7 +573,7 @@ export default function DeliveryPage() {
         </div>
       )}
 
-      {/* DELETE CONFIRM MODAL */}
+      
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmDeleteId("")} />

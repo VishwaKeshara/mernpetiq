@@ -289,7 +289,11 @@ function AppointmentAdd() {
           navigate("/payment", { 
             state: { 
               appointment: appointmentForm,
-              message: "Appointment created successfully! Please proceed with payment."
+              message: "Appointment created successfully! Please proceed with payment.",
+              step: "review", // Navigate directly to the review page with saved cards
+              service: appointmentForm.service, // Include the selected service name
+              amount: appointmentForm.price, // Include the price for the payment page
+              source: "hospital" // Specify the source as hospital for appointment payments
             }
           });
         }

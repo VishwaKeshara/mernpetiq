@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
-import { paymentBaseURL } from "../../axiosinstance.js";
 
 export default function SaveCardSheet({ open, onClose, onSaved, cardholderName }) {
   const stripe = useStripe();
@@ -12,13 +11,13 @@ export default function SaveCardSheet({ open, onClose, onSaved, cardholderName }
   useEffect(() => {
     if (!open) return;
     setErr("");
-    paymentBaseURL.post("/create-setup-intent", {})
-      .then((response) => {
-        const d = response.data;
+    fetch("http://localhost:4242/api/create-setup-intent", { method: "POST" })
+      .then((r) => r.json())
+      .then((d) => {
         if (d.clientSecret) setClientSecret(d.clientSecret);
         else setErr(d.error || "Failed to create SetupIntent");
       })
-      .catch((e) => setErr(e.response?.data?.error || e.message));
+      .catch((e) => setErr(e.message));
   }, [open]);
 
   async function handleSave() {
@@ -39,18 +38,13 @@ export default function SaveCardSheet({ open, onClose, onSaved, cardholderName }
     }
     const pmId = setupIntent.payment_method;
     
-    try {
-      const response = await paymentBaseURL.get(`/payment-method/${pmId}`);
-      const info = response.data;
-      if (info.error) {
-        setErr(info.error);
-        return;
-      }
-      onSaved(info);
-      onClose();
-    } catch (e) {
-      setErr(e.response?.data?.error || e.message || "Could not fetch payment method");
+    const info = await fetch(`http://localhost:4242/api/payment-method/${pmId}`).then((r) => r.json());
+    if (info.error) {
+      setErr(info.error);
+      return;
     }
+    onSaved(info);
+    onClose();
   }
 
   if (!open) return null;

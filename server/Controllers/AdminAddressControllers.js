@@ -1,18 +1,15 @@
-const Address = require("../Model/AddressModel");
+import Address from "../Model/AddressModel.js";
 
-// Constants
 const PROVINCES = [
   "Western", "Central", "Southern", "Northern", "Eastern",
   "North Western", "North Central", "Uva", "Sabaragamuwa",
 ];
 
-// Helper functions
 function escapeRegex(s = "") {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Controller functions
-const getAdminAddresses = async (req, res) => {
+export async function getAdminAddresses(req, res) {
   try {
     const {
       q = "",
@@ -28,17 +25,14 @@ const getAdminAddresses = async (req, res) => {
 
     const filter = {};
 
-    // Province filter
     if (province && PROVINCES.includes(province)) {
       filter.state = province;
     }
 
-    // Search filter
     if (q && q.trim().length) {
       const trimmed = q.trim();
       const esc = (s) => ({ $regex: escapeRegex(s), $options: "i" });
 
-      // Basic field searches
       const or = [
         { firstName: esc(trimmed) },
         { lastName: esc(trimmed) },
@@ -51,21 +45,16 @@ const getAdminAddresses = async (req, res) => {
         { country: esc(trimmed) },
       ];
 
-      // Name combination searches
       const parts = trimmed.split(/\s+/).filter(Boolean);
       if (parts.length >= 2) {
         const first = parts[0];
         const last = parts[parts.length - 1];
-        const rest = parts.slice(1).join(" ");          
-        const restFront = parts.slice(0, -1).join(" "); 
-
-        // Add combination searches
+        const rest = parts.slice(1).join(" ");
+        const restFront = parts.slice(0, -1).join(" ");
         or.unshift(
           { $and: [{ firstName: esc(first) }, { lastName: esc(rest) }] },
           { $and: [{ firstName: esc(restFront) }, { lastName: esc(last) }] }
         );
-
-        // Two-word name searches
         if (parts.length === 2) {
           or.unshift(
             { $and: [{ firstName: esc(parts[0]) }, { lastName: esc(parts[1]) }] },
@@ -77,17 +66,14 @@ const getAdminAddresses = async (req, res) => {
       filter.$or = or;
     }
 
-    // Sort configuration
     const sortField = ["createdAt", "firstName", "lastName", "city", "state"].includes(sort)
       ? sort
       : "createdAt";
     const sortDir = order === "asc" ? 1 : -1;
-    const sortObj = { [sortField]: sortDir };
 
-    // Execute query
     const total = await Address.countDocuments(filter);
     const items = await Address.find(filter)
-      .sort(sortObj)
+      .sort({ [sortField]: sortDir })
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum)
       .lean();
@@ -105,7 +91,4 @@ const getAdminAddresses = async (req, res) => {
     console.error("GET /api/admin/addresses error:", e);
     res.status(500).json({ error: "SERVER_ERROR", message: e.message });
   }
-};
-
-//Export all functions  
-exports.getAdminAddresses = getAdminAddresses;
+}

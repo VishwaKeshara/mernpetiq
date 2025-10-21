@@ -1,72 +1,253 @@
-import React, { useState } from 'react';
-import { FaArrowLeft, FaShoppingCart, FaCreditCard, FaUser, FaMapMarkerAlt, FaPhone } from 'react-icons/fa';
-import { useCart } from '../context/CartContext';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { FaShoppingCart } from "react-icons/fa";
+import { useCart } from "../context/CartContext";
+import { useNavigate } from "react-router-dom";
+import { paymentBaseURL } from "../axiosinstance";
 
-function Checkout() {
+// Default user ID for non-logged in users
+const USER_ID = "guest";
+const PROVINCES = [
+  "Western","Central","Southern","Northern","Eastern",
+  "North Western","North Central","Uva","Sabaragamuwa",
+];
+
+function Field({ label, required = false, error, className = "", children }) {
+  return (
+    <label className={`block ${className}`}>
+      <div className="mb-1 text-sm font-medium text-gray-700">
+        <span>{label}</span>
+        {required && <span className="text-red-600"> *</span>}
+      </div>
+      {children}
+      {error ? <div className="mt-1 text-sm text-red-600">{error}</div> : null}
+    </label>
+  );
+}
+function inputCls(hasError) {
+  return `block w-full h-11 rounded-md border px-3 outline-none focus:ring-2 ${
+    hasError ? "border-red-500 focus:ring-red-500" : "border-gray-400 focus:ring-blue-500"
+  }`;
+}
+
+export default function Checkout() {
   const navigate = useNavigate();
   const { cartItems, getCartTotals } = useCart();
   const { totalItems, totalPrice } = getCartTotals();
 
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    postalCode: '',
-    paymentMethod: 'card'
-  });
+  
+  const [addresses, setAddresses] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [listError, setListError] = useState("");
+  const [selectedId, setSelectedId] = useState(() => window.localStorage.getItem("vms:selectedAddressId") || "");
+  useEffect(() => window.localStorage.setItem("vms:selectedAddressId", selectedId || ""), [selectedId]);
+  const MAX_ADDRESSES = 3;
+  const atLimit = addresses.length >= MAX_ADDRESSES;
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const emptyForm = {
+    firstName: "", lastName: "", phone: "",
+    line1: "", line2: "", city: "", postalCode: "",
+    state: "", country: "Sri Lanka",
   };
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState("");
+  const [form, setForm] = useState(emptyForm);
+  const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [serverNotice, setServerNotice] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState("");
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  
+  const deliveryImages = ["/images/vmsp7.webp", "/images/vmsp8.webp"];
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  useEffect(() => setCurrentImageIndex(0), []);
+  useEffect(() => {
+    if (!deliveryImages.length) return;
+    const id = setInterval(() => setCurrentImageIndex((i) => (i + 1) % deliveryImages.length), 3500);
+    return () => clearInterval(id);
+  }, [deliveryImages.length]);
 
+
+  async function loadAddresses() {
+    setLoadingList(true);
+    setListError("");
     try {
-      // Prepare order data for payment
-      const orderData = {
-        customerInfo: {
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
-        },
-        shippingAddress: {
-          address: formData.address,
-          city: formData.city,
-          postalCode: formData.postalCode,
-        },
-        items: cartItems,
-        totalItems,
-        totalPrice,
-        paymentMethod: formData.paymentMethod,
-        orderDate: new Date().toISOString(),
-      };
-
-      // Navigate to payment page with order data
-      navigate('/payment', { 
-        state: { 
-          orderData,
-          source: 'product_order',
-          amount: totalPrice 
-        } 
+      console.log("Fetching addresses for user:", USER_ID);
+      const { data } = await paymentBaseURL.get("/addresses", {
+        params: { userId: USER_ID }
       });
-    } catch (error) {
-      console.error('Error processing order:', error);
-      alert('Error processing order. Please try again.');
+      console.log("Addresses loaded:", data);
+      setAddresses(Array.isArray(data) ? data : []);
+      if (selectedId && !data.find((a) => a._id === selectedId)) {
+        setSelectedId("");
+      }
+    } catch (e) {
+      console.error("Error loading addresses:", e.response || e);
+      setListError(e?.response?.data?.message || e?.message || "Failed to load addresses");
     } finally {
-      setIsSubmitting(false);
+      setLoadingList(false);
     }
-  };
+  }
+  useEffect(() => { loadAddresses(); }, []);
 
+  
+  const preventDigitsKey = (e) => { if (/\d/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) e.preventDefault(); };
+  const setLettersOnly = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value.replace(/[0-9]/g, "") }));
+  const setDigitsOnly = (key, maxLen) => (e) => setForm((f) => ({ ...f, [key]: e.target.value.replace(/\D/g, "").slice(0, maxLen || 99) }));
+
+  function openAdd() {
+    if (atLimit) return;
+    setEditingId("");
+    setForm({ ...emptyForm });
+    setErrors({});
+    setShowForm(true);
+  }
+  function openEdit(id) {
+    const a = addresses.find((x) => x._id === id);
+    if (!a) return;
+    setEditingId(id);
+    setForm({
+      firstName: a.firstName || "", lastName: a.lastName || "", phone: a.phone || "",
+      line1: a.line1 || "", line2: a.line2 || "", city: a.city || "",
+      postalCode: a.postalCode || "", state: a.state || "", country: a.country || "Sri Lanka",
+    });
+    setErrors({});
+    setShowForm(true);
+  }
+  function validate(f) {
+    const e = {};
+    if (!f.firstName.trim()) e.firstName = "First name is required";
+    if (!f.lastName.trim()) e.lastName = "Last name is required";
+    if (/\d/.test(f.firstName)) e.firstName = "First name cannot contain numbers";
+    if (/\d/.test(f.lastName)) e.lastName = "Last name cannot contain numbers";
+    if (!f.phone.trim()) e.phone = "Phone is required";
+    else if (f.phone.replace(/\D/g, "").length !== 10) e.phone = "Phone must be 10 digits";
+    if (!f.line1.trim()) e.line1 = "Address line 1 is required";
+    if (!f.city.trim()) e.city = "City is required";
+    if (!f.state.trim()) e.state = "Province is required";
+    if (f.postalCode && /\D/.test(f.postalCode)) e.postalCode = "Postal code must be numbers only";
+    return e;
+  }
+  async function saveForm() {
+    setServerNotice("");
+    const e = validate(form);
+    setErrors(e);
+    if (Object.keys(e).length) return;
+
+    setSaving(true);
+    try {
+      if (editingId) {
+        try {
+          await paymentBaseURL.patch(`/addresses/${editingId}`, { 
+            userId: USER_ID, 
+            ...form 
+          });
+        } catch (error) {
+          if (error.response?.status === 400) {
+            setErrors(error.response.data.errors || {});
+            return;
+          }
+          throw error;
+        }
+      } else {
+        try {
+          await paymentBaseURL.post('/addresses', {
+            userId: USER_ID,
+            ...form
+          });
+        } catch (error) {
+          if (error.response?.status === 409) {
+            setServerNotice(error.response.data.message || "You can only add up to 3 delivery addresses.");
+            return;
+          }
+          if (error.response?.status === 400) {
+            setErrors(error.response.data.errors || {});
+            return;
+          }
+          throw error;
+        }
+      }
+      setShowForm(false);
+      await loadAddresses();
+    } catch (err) {
+      setServerNotice(err?.response?.data?.message || err.message || "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function removeAddress(id) {
+    try {
+      await paymentBaseURL.delete(`/addresses/${id}`, {
+        params: { userId: USER_ID }
+      });
+      if (selectedId === id) setSelectedId("");
+      await loadAddresses();
+    } catch (e) {
+      alert(e?.response?.data?.message || e.message || "Failed to delete address");
+    } finally {
+      setConfirmDeleteId("");
+    }
+  }
+  function contactNameOf(a) { return [a.firstName, a.lastName].filter(Boolean).join(" ").trim() || "—"; }
+  function formatAddressOneLine(a) { return [a.line1, a.line2, a.city, a.state, a.postalCode, a.country].filter(Boolean).join(", "); }
+
+  
+  function handleUseThisAddress() {
+    if (!selectedId) return;
+    const sel = addresses.find((a) => a._id === selectedId);
+    if (!sel) {
+      alert("Please select a delivery address.");
+      return;
+    }
+
+    
+    const snapshot = {
+      firstName: sel.firstName || "",
+      lastName: sel.lastName || "",
+      phone: sel.phone || "",
+      line1: sel.line1 || "",
+      line2: sel.line2 || "",
+      city: sel.city || "",
+      state: sel.state || "",
+      postalCode: sel.postalCode || "",
+      country: sel.country || "Sri Lanka",
+    };
+
+    
+    try {
+      localStorage.setItem("invoice:lastDeliverySnapshot", JSON.stringify(snapshot));
+      localStorage.setItem("selectedAddress", JSON.stringify(snapshot));
+      localStorage.setItem("mart:selectedAddress", JSON.stringify(snapshot));
+      localStorage.setItem("address:selected_json", JSON.stringify(snapshot));
+      localStorage.setItem("address:selected_id", selectedId);
+      localStorage.setItem("vms:selectedAddressId", selectedId);
+      
+      window.__LAST_DELIVERY__ = snapshot;
+    } catch {}
+
+    
+    const qs = new URLSearchParams();
+    qs.set("total", String(totalPrice));
+    qs.set("purpose", "Mart");
+    qs.set("selectedAddressId", selectedId);
+    qs.set("currency", "LKR");
+    qs.set("step", "review");
+    qs.set("mode", "add");
+
+    qs.set("firstName", snapshot.firstName);
+    qs.set("lastName", snapshot.lastName);
+    qs.set("phone", snapshot.phone);
+    qs.set("line1", snapshot.line1);
+    if (snapshot.line2) qs.set("line2", snapshot.line2);
+    qs.set("city", snapshot.city);
+    qs.set("state", snapshot.state);
+    if (snapshot.postalCode) qs.set("postalCode", snapshot.postalCode);
+    qs.set("country", snapshot.country);
+
+    navigate(`/payment?${qs.toString()}`);
+  }
+
+  
   if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -84,178 +265,183 @@ function Checkout() {
     );
   }
 
+  
+  const GRID_TEMPLATE =
+    "grid grid-cols-[40px_minmax(0,2.2fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_minmax(0,0.6fr)] gap-x-6";
+
+  
+  const TruckIcon = (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 text-emerald-800" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v7" />
+      <path d="M14 11h4.5a2 2 0 0 1 1.6.8l1.4 1.9A2 2 0 0 1 22 15.2V16a2 2 0 0 1-2 2h-1" />
+      <circle cx="8.5" cy="18" r="2" />
+      <circle cx="17" cy="18" r="2" />
+      <path d="M3 9v7h3" />
+    </svg>
+  );
+  const PencilIcon = (
+    <svg viewBox="0 0 20 20" className="h-5 w-5 text-blue-600" fill="currentColor" aria-hidden="true">
+      <path d="M13.586 3.586a2 2 0 112.828 2.828l-8.95 8.95A4 4 0 014 17H3v-1a4 4 0 011.172-2.828l8.95-8.95z" />
+    </svg>
+  );
+  const TrashIcon = (
+    <svg viewBox="0 0 20 20" className="h-5 w-5 text-red-600" fill="currentColor" aria-hidden="true">
+      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 100 2h.278l.823 9.052A4 4 0 009.09 19h1.82a4 4 0 003.99-3.948L15.722 6H16a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0010 2H9zM8 8a1 1 0 012 0v7a1 1 0 11-2 0V8zm5 0a1 1 0 10-2 0v7a1 1 0 102 0V8z" clipRule="evenodd" />
+    </svg>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Back Button */}
-        <button
-          
-          
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-600 hover:text-yellow-600 mb-6 font-medium transition-colors duration-200"
-        >
-          <FaArrowLeft />
-          Back to Cart
-        </button>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Checkout Form */}
-          <div
-            
-            
-            
-            className="bg-white rounded-2xl shadow-lg p-6"
+    <div className="min-h-screen bg-white">
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] min-h-screen">
+        
+        <div className="p-8 lg:p-12 flex flex-col">
+          <motion.button
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-gray-600 hover:text-yellow-600 mb-6 font-medium transition-colors duration-200"
           >
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-              <FaUser className="text-yellow-600" />
-              Checkout Information
-            </h2>
+            <svg width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="M20 11H7.83l5.58-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z"/></svg>
+            Back to Cart
+          </motion.button>
+          <h2 className="text-2xl font-semibold">Delivery Details</h2>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Personal Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800">Personal Information</h3>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                  />
+          {serverNotice && (
+            <div className="mt-4 rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-yellow-800">
+              {serverNotice}
+            </div>
+          )}
+          {listError && (
+            <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+              {listError}
+            </div>
+          )}
+
+          
+          <div className="mt-6 border rounded-lg border-gray-300">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold">Your Delivery Details</h3>
+            </div>
+            <div className={`px-6 py-3 ${GRID_TEMPLATE} items-center text-sm text-gray-600`}>
+              <div></div>
+              <div>Address</div>
+              <div>Contact</div>
+              <div>Phone</div>
+              <div></div>
+            </div>
+            <div className="pb-2 space-y-3">
+              {loadingList ? (
+                <div className="px-6 py-4 text-gray-500">Loading…</div>
+              ) : (
+                addresses.map((a) => {
+                  const selected = selectedId === a._id;
+                  return (
+                    <div
+                      key={a._id}
+                      className={`rounded-md px-6 py-4 border ${
+                        selected ? "bg-orange-50 border-orange-200" : "bg-white border-gray-200"
+                      }`}
+                    >
+                      <div className={`${GRID_TEMPLATE} items-center`}>
+                      
+                        <div className="flex items-center">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedId((cur) => (cur === a._id ? "" : a._id))}
+                            aria-pressed={selected}
+                            aria-label={selected ? "Unselect" : "Select"}
+                            className={`h-4 w-4 rounded-full border ${
+                              selected ? "border-blue-600" : "border-gray-400"
+                            } flex items-center justify-center`}
+                          >
+                            <span
+                              className={`h-2.5 w-2.5 rounded-full ${
+                                selected ? "bg-blue-600" : "bg-transparent"
+                              }`}
+                            />
+                          </button>
+                        </div>
+                        
+                        <div className="text-gray-900">{formatAddressOneLine(a)}</div>
+                        
+                        <div className="text-gray-900">{contactNameOf(a)}</div>
+                      
+                        <div className="text-gray-900 whitespace-nowrap">{a.phone}</div>
+                        
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            type="button"
+                            title="Edit"
+                            aria-label="Edit"
+                            onClick={() => openEdit(a._id)}
+                            className="p-1 rounded hover:bg-gray-100"
+                          >
+                            {PencilIcon}
+                          </button>
+                          <button
+                            type="button"
+                            title="Delete"
+                            aria-label="Delete"
+                            onClick={() => setConfirmDeleteId(a._id)}
+                            className="p-1 rounded hover:bg-gray-100"
+                          >
+                            {TrashIcon}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            
+            <div className="px-6 pb-6">
+              {atLimit ? (
+                <div className="w-full rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                  You can only add up to {MAX_ADDRESSES} delivery addresses.
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                  />
-                </div>
-              </div>
-
-              {/* Shipping Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                  <FaMapMarkerAlt className="text-yellow-600" />
-                  Shipping Address
-                </h3>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                  <textarea
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                    />
+              ) : (
+                <button
+                  type="button"
+                  onClick={openAdd}
+                  className="w-full text-left rounded-md border border-emerald-300 bg-emerald-50 hover:bg-emerald-100"
+                >
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-emerald-300 bg-white">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-emerald-700">
+                        <path d="M10 4a1 1 0 011 1v4h4a1 1 0 110 2h-4v4a1 1 0 11-2 0v-4H5a1 1 0 110-2h4V5a1 1 0 011-1z" />
+                      </svg>
+                    </span>
+                    {TruckIcon}
+                    <span className="text-emerald-800 font-medium">Add your delivery details</span>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
-                    <input
-                      type="text"
-                      name="postalCode"
-                      value={formData.postalCode}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Method */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                  <FaCreditCard className="text-yellow-600" />
-                  Payment Method
-                </h3>
-                
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="card"
-                      checked={formData.paymentMethod === 'card'}
-                      onChange={handleInputChange}
-                      className="mr-2"
-                    />
-                    Credit/Debit Card
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="cash"
-                      checked={formData.paymentMethod === 'cash'}
-                      onChange={handleInputChange}
-                      className="mr-2"
-                    />
-                    Cash on Delivery
-                  </label>
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                
-                
-                className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-6 py-4 rounded-xl font-bold text-lg shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? 'Processing...' : `Place Order - Rs. ${totalPrice.toLocaleString()}`}
-              </button>
-            </form>
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Order Summary */}
-          <div
-            
-            
-            
-            className="bg-white rounded-2xl shadow-lg p-6 h-fit"
+          
+          <button
+            type="button"
+            onClick={handleUseThisAddress}
+            disabled={!selectedId}
+            className={`mt-6 w-full rounded-full font-semibold py-3 ${
+              selectedId
+                ? "bg-yellow-400 hover:bg-yellow-500 text-black"
+                : "bg-gray-200 text-gray-500 cursor-not-allowed"
+            }`}
           >
+            Use this delivery address
+          </button>
+        </div>
+
+        
+        <div className="p-8 lg:p-12 border-t lg:border-t-0 lg:border-l border-gray-300">
+          <div className="bg-white rounded-2xl shadow-lg p-6 h-fit">
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
               <FaShoppingCart className="text-yellow-600" />
               Order Summary ({totalItems} items)
             </h2>
-
             <div className="space-y-4 mb-6">
               {cartItems.map((item) => (
                 <div key={item._id} className="flex gap-4 p-4 bg-gray-50 rounded-xl">
@@ -265,7 +451,7 @@ function Checkout() {
                       alt={item.name}
                       className="w-full h-full object-cover rounded-lg"
                       onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/64x64/FEF3C7/D97706?text=Pet';
+                        e.target.src = "https://via.placeholder.com/64x64/FEF3C7/D97706?text=Pet";
                       }}
                     />
                   </div>
@@ -282,8 +468,6 @@ function Checkout() {
                 </div>
               ))}
             </div>
-
-            {/* Total */}
             <div className="border-t pt-4">
               <div className="flex items-center justify-between text-xl font-bold">
                 <span className="text-gray-900">Total:</span>
@@ -292,10 +476,178 @@ function Checkout() {
               <p className="text-sm text-gray-600 mt-2">Including all taxes and fees</p>
             </div>
           </div>
+          {deliveryImages.length > 0 && (
+            <div className="mt-8 relative h-[420px]">
+              {deliveryImages.map((src, i) => (
+                <div
+                  key={i}
+                  className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                    currentImageIndex === i ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  <img
+                    src={src}
+                    alt="Delivery"
+                    className="w-full max-w-sm mx-auto rounded-md"
+                    style={{ height: "auto", maxHeight: "420px" }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+    
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowForm(false)} />
+          <div className="relative z-10 w-[92%] max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-xl font-semibold mb-4">
+              {editingId ? "Edit delivery details" : "Add delivery details"}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="First name" required error={errors.firstName}>
+                <input
+                  className={inputCls(!!errors.firstName)}
+                  value={form.firstName}
+                  onChange={setLettersOnly("firstName")}
+                  onKeyDown={preventDigitsKey}
+                  placeholder="First name"
+                  inputMode="text"
+                  autoCapitalize="words"
+                />
+              </Field>
+              <Field label="Last name" required error={errors.lastName}>
+                <input
+                  className={inputCls(!!errors.lastName)}
+                  value={form.lastName}
+                  onChange={setLettersOnly("lastName")}
+                  onKeyDown={preventDigitsKey}
+                  placeholder="Last name"
+                  inputMode="text"
+                  autoCapitalize="words"
+                />
+              </Field>
+              <Field label="Phone" required error={errors.phone}>
+                <input
+                  className={inputCls(!!errors.phone)}
+                  value={form.phone}
+                  onChange={setDigitsOnly("phone", 10)}
+                  maxLength={10}
+                  placeholder="07XXXXXXXX"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                />
+              </Field>
+              <Field label="Address line 1" required error={errors.line1} className="sm:col-span-2">
+                <input
+                  className={inputCls(!!errors.line1)}
+                  value={form.line1}
+                  onChange={(e) => setForm({ ...form, line1: e.target.value })}
+                  placeholder="House No, Street"
+                />
+              </Field>
+              <Field label="Address line 2 (optional)" className="sm:col-span-2">
+                <input
+                  className={inputCls(false)}
+                  value={form.line2}
+                  onChange={(e) => setForm({ ...form, line2: e.target.value })}
+                  placeholder="Apartment, landmark"
+                />
+              </Field>
+              <Field label="City" required error={errors.city}>
+                <input
+                  className={inputCls(!!errors.city)}
+                  value={form.city}
+                  onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  placeholder="City"
+                />
+              </Field>
+              <Field label="Postal code" error={errors.postalCode}>
+                <input
+                  className={inputCls(!!errors.postalCode)}
+                  value={form.postalCode}
+                  onChange={setDigitsOnly("postalCode")}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Postal code"
+                />
+              </Field>
+              <Field label="Province" required error={errors.state}>
+                <select
+                  className={inputCls(!!errors.state)}
+                  value={form.state}
+                  onChange={(e) => setForm({ ...form, state: e.target.value })}
+                >
+                  <option value="">Select a province</option>
+                  {PROVINCES.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Country">
+                <input
+                  className={inputCls(false)}
+                  value={form.country}
+                  onChange={(e) => setForm({ ...form, country: e.target.value })}
+                  placeholder="Country"
+                />
+              </Field>
+            </div>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="rounded-full border border-gray-300 bg-gray-100 px-5 py-2.5 text-gray-700 hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveForm}
+                disabled={saving}
+                className="rounded-full bg-blue-600 px-5 py-2.5 text-white hover:bg-blue-700 disabled:opacity-60"
+              >
+                {saving ? "Saving..." : editingId ? "Save changes" : "Save & Continue"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmDeleteId("")} />
+          <div className="relative z-10 w-[92%] max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+              <svg viewBox="0 0 24 24" className="h-8 w-8 text-red-500">
+                <path d="M9 3h6l1 2h5v2H3V5h5l1-2zM5 9h14l-1 11H6L5 9z" fill="currentColor" />
+              </svg>
+            </div>
+            <h3 className="mt-4 text-2xl font-semibold text-center">Delete delivery details?</h3>
+            <p className="mt-2 text-center text-gray-600">
+              This will permanently remove the selected delivery address.
+            </p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteId("")}
+                className="rounded-full border border-gray-300 bg-gray-100 py-3 text-gray-700 hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => removeAddress(confirmDeleteId)}
+                className="rounded-full bg-red-500 py-3 text-white hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-export default Checkout;
