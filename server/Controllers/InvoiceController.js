@@ -131,7 +131,7 @@ async function buildTxView({ tx, pi, deliveryAddressId }) {
 
   let address = null;
   if (source === "mart") {
-    // First priority: Check explicitly provided delivery address ID
+    
     if (deliveryAddressId) {
       try {
         address = await Address.findById(deliveryAddressId).lean();
@@ -143,9 +143,9 @@ async function buildTxView({ tx, pi, deliveryAddressId }) {
       }
     }
     
-    // If we still don't have an address, try other sources
+    
     if (!address) {
-      // Get from local storage through query params (priority order)
+      
       const lsAddressId = tx?.metadata?.vms_selectedAddressId || pi?.metadata?.vms_selectedAddressId;
       if (lsAddressId) {
         try {
@@ -159,7 +159,7 @@ async function buildTxView({ tx, pi, deliveryAddressId }) {
       }
     }
     
-    // If we still don't have an address, try metadata fields
+    
     if (!address) {
       let addressId = "";
       
