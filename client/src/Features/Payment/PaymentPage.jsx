@@ -845,7 +845,6 @@ export default function PaymentPage() {
   const [successMartItems, setSuccessMartItems] = useState(null);
   const [successDelivery, setSuccessDelivery] = useState(null);
   const [lastPaymentRes, setLastPaymentRes] = useState(null);
-  // Store appointment details for invoice generation
   const [appointmentDetails, setAppointmentDetails] = useState(null);
   
   useEffect(() => {
@@ -1106,7 +1105,6 @@ export default function PaymentPage() {
 
       if (selectedAddressId) {
         paymentData.address_id = selectedAddressId;
-        // Set both fields to ensure we catch it in both ways
         paymentData.delivery_address_id = selectedAddressId;
         console.log("Setting address ID for payment:", selectedAddressId);
       }
@@ -1115,7 +1113,7 @@ export default function PaymentPage() {
         const norm = normalizeAddressSnapshot(finalSnapshot);
         paymentData.delivery = { ...norm };
         
-        // If we have the address ID in the snapshot, ensure it's set
+        
         if (finalSnapshot._id && !paymentData.address_id) {
           paymentData.address_id = finalSnapshot._id;
           paymentData.delivery_address_id = finalSnapshot._id;
@@ -1312,17 +1310,17 @@ export default function PaymentPage() {
   }
 
   
-  // Helper function to score address snapshots based on completeness
+  
   function scoreDelivery(snapshot) {
     if (!snapshot) return 0;
     let score = 0;
     
-    // Basic fields
+    
     if (snapshot.firstName) score += 1;
     if (snapshot.lastName) score += 1;
     if (snapshot.phone) score += 2;
     
-    // Address fields
+
     if (snapshot.line1) score += 3;
     if (snapshot.line2) score += 1;
     if (snapshot.city) score += 2;
@@ -1333,7 +1331,7 @@ export default function PaymentPage() {
     return score;
   }
   
-  // Store the best invoice snapshot in localStorage
+  
   function setInvoiceSnapshotIfBetter(snapshot) {
     if (!snapshot) return;
     
@@ -1345,7 +1343,7 @@ export default function PaymentPage() {
         const existingScore = scoreDelivery(normalized);
         const newScore = scoreDelivery(snapshot);
         
-        if (newScore <= existingScore) return; // Keep existing if it's better
+        if (newScore <= existingScore) return; 
       }
       
       localStorage.setItem(LS_INVOICE_DELIVERY, JSON.stringify(snapshot));
@@ -1355,7 +1353,7 @@ export default function PaymentPage() {
     }
   }
   
-  // Find any address-like object in localStorage
+  
   function findAnyAddressInLocalStorage() {
     if (typeof window === 'undefined' || !window.localStorage) return null;
     
@@ -1385,12 +1383,12 @@ export default function PaymentPage() {
     return null;
   }
   
-  // Try to fetch delivery information from the server by ref ID or payment intent ID
+  
   async function tryFetchDeliveryByRefOrPI({ refId, piId }) {
     if (!refId && !piId) return null;
     
     try {
-      // Try to get payment details which might contain address info
+      
       const params = {};
       if (refId) params.ref_id = refId;
       if (piId) params.payment_intent_id = piId;
@@ -1398,7 +1396,7 @@ export default function PaymentPage() {
       const { data } = await paymentBaseURL.get("/payments/details", { params });
       if (!data) return null;
       
-      // Extract delivery from the payment data
+      
       return extractDeliveryFromAny(data);
     } catch (err) {
       console.debug("Failed to fetch delivery by ref/pi:", err);
@@ -1406,9 +1404,7 @@ export default function PaymentPage() {
     }
   }
   
-  // Using the existing joinAddressParts function defined at the top of the file
-
-  // Choose the best delivery snapshot from multiple sources
+ 
   function bestDeliverySnapshot(...snapshots) {
     let best = null;
     let bestScore = -1;
@@ -1676,7 +1672,7 @@ if (source === "mart" && Array.isArray(successMartItems) && successMartItems.len
       };
 
       if (source === "mart") {
-        // Use deliveryOverride if provided, otherwise fall back to delivery from state
+        
         const deliveryData = deliveryOverride || delivery;
         const name = deliveryData ? `${(deliveryData.firstName || "").trim()} ${(deliveryData.lastName || "").trim()}`.trim() : "";
         const phone = deliveryData?.phone || "";
@@ -1685,7 +1681,7 @@ if (source === "mart" && Array.isArray(successMartItems) && successMartItems.len
         row("Phone", phone || "—");
         row("Address", address || "—", true);
       } else if (source === "hospital" && appointmentDetails) {
-        // For hospital appointments, use the stored appointment information
+        
         row("Patient Name", appointmentDetails.ownerName || "—");
         row("Pet Name", appointmentDetails.petName || "—");
         row("Pet Type", appointmentDetails.petType || "—");
@@ -1694,7 +1690,7 @@ if (source === "mart" && Array.isArray(successMartItems) && successMartItems.len
         row("Appointment Date", appointmentDetails.date || "—");
         row("Appointment Time", appointmentDetails.time || "—");
       } else if (source === "hospital") {
-        // For hospital appointments without details, still show the service info
+        
         row("Service", service || "Hospital Service");
         row("Date", formatDateTime(paidAt || new Date()));
         row("Reference", refLine || "—");
@@ -1774,7 +1770,7 @@ if (source === "mart" && Array.isArray(successMartItems) && successMartItems.len
 
       
       let filename = `Invoice-${refLine}.pdf`;
-      // For hospital appointments, include service in filename
+  
       if (source === "hospital" && appointmentDetails?.service) {
         filename = `Invoice-${appointmentDetails.service.replace(/[^a-z0-9]/gi, '')}-${refLine}.pdf`;
       }
@@ -1798,12 +1794,12 @@ if (source === "mart" && Array.isArray(successMartItems) && successMartItems.len
 
     setDownloadingInvoice(true);
     try {
-      // Get the selected address ID
+      
       const { addressId: selectedAddressId } = getSelectedAddressInfo();
       
       const deliveryNow = await resolveDeliverySnapshotNow({ refId, piId });
 
-      // Generate client-side PDF for both mart and hospital sources
+      
       if (source === "mart" || source === "hospital") {
         const ok = await generateClientInvoicePdf({ refId, piId, deliveryOverride: deliveryNow });
         if (ok) return;
@@ -1814,7 +1810,7 @@ if (source === "mart" && Array.isArray(successMartItems) && successMartItems.len
       const attempts = [];
 
       if (refId) {
-        // Pass the selected address ID to the invoice endpoint
+        
         attempts.push(() => tryGetPdf(`/payments/${encodeURIComponent(refId)}/invoice`, { 
           params: { deliveryAddressId: selectedAddressId } 
         }));
@@ -1901,15 +1897,15 @@ if (source === "mart" && Array.isArray(successMartItems) && successMartItems.len
         const { data: setupData } = await paymentBaseURL.post("/create-setup-intent");
         if (!setupData?.clientSecret) throw new Error(setupData?.error || "Couldn't start card save.");
         
-        // Handle different response types
+        
         let pmId;
         
         if (setupData.demoMode) {
-          // Demo mode - skip actual Stripe API call
+      
           console.log("Using demo mode for payment setup");
           pmId = setupData.demoPaymentMethodId;
         } else {
-          // Normal flow with actual Stripe API
+        
           const numberEl = elements.getElement(CardNumberElement);
           const { error, setupIntent } = await stripe.confirmCardSetup(setupData.clientSecret, {
             payment_method: {
@@ -1923,7 +1919,7 @@ if (source === "mart" && Array.isArray(successMartItems) && successMartItems.len
           pmId = setupIntent.payment_method;
         }
 
-        // pmId is now defined above
+      
         const { data: pm } = await paymentBaseURL.get(`/payment-method/${pmId}`);
 
         const brand = pm?.brand || pm?.card?.brand || "";
