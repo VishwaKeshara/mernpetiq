@@ -22,7 +22,7 @@ import { QuickDownloadButton } from '../../components/PdfDownloader';
 
 const VetDashboard = () => {
   // Mock user data since authentication is removed
-  const user = { name: 'Dr. Veterinarian', role: 'vet' };
+  const user = { name: 'Dr. Tharaka', role: 'vet' };
   const logout = () => {
     toast.info('Logout functionality removed');
   };

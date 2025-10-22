@@ -1,28 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { appointmentBaseURL } from "../../axiosinstance.js";
 import { MdDelete } from "react-icons/md";
-import { FaPen, FaSearch, FaCalendarAlt, FaPlus, FaTachometerAlt, FaDownload, FaDollarSign, FaChartLine } from "react-icons/fa";
+import { FaPen, FaSearch, FaCalendarAlt, FaPlus } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 function AppointmentList({ isUserProfile = false }) {
   const [appointmentList, setAppointmentList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalAppointments: 0,
-    totalIncome: 0
-  });
   const navigate = useNavigate();
-  const location = useLocation();
   const { user } = useAuth();
-  
-  // Check if accessed from admin panel
-  const isAdminView = location.pathname.includes('/admin/') && !isUserProfile;
 
   const toAmPm = (time24) => {
     if (!time24) return "";
@@ -54,18 +43,6 @@ function AppointmentList({ isUserProfile = false }) {
       
       setAppointmentList(items);
       
-      // Calculate statistics
-      const totalAppointments = items.length;
-      const totalIncome = items.reduce((sum, appointment) => {
-        const price = Number(appointment.price) || 0;
-        return sum + price;
-      }, 0);
-      
-      setStats({
-        totalAppointments,
-        totalIncome
-      });
-      
     } catch (error) {
       console.log(error);
     } finally {
@@ -95,106 +72,12 @@ function AppointmentList({ isUserProfile = false }) {
 
   const handleUpdate = (appointment) => {
     // Navigate to the add/update form with the selected appointment as state
-    // Pass a flag so the form knows to return to correct page after update
     navigate(`/appointmentAdd`, { 
       state: { 
         ...appointment, 
-        fromAdmin: isAdminView,
         fromProfile: isUserProfile 
       } 
     });
-  };
-
-  const handleDownloadPDF = () => {
-    try {
-      console.log('PDF download started');
-      
-      // Check if appointments are still loading
-      if (loading) {
-        alert('Please wait for appointments to finish loading...');
-        return;
-      }
-      
-      // Check if appointments are available
-      if (!filteredAppointments || filteredAppointments.length === 0) {
-        alert('No appointments available to download');
-        return;
-      }
-
-      // Create new PDF document
-      const doc = new jsPDF();
-      
-      // Add title
-      doc.setFontSize(18);
-      doc.setFont("helvetica", "bold");
-      doc.text('Appointments Report', 20, 20);
-      
-      // Add generation date
-      const now = new Date();
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Generated on: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 20, 30);
-      
-      // Prepare data for table
-      const tableData = filteredAppointments.map((appointment, index) => [
-        (index + 1).toString(),
-        appointment.ownerName || 'N/A',
-        appointment.petName || 'N/A',
-        appointment.petType || 'N/A',
-        appointment.service || 'N/A',
-        appointment.vet || 'N/A',
-        appointment.date ? new Date(appointment.date).toLocaleDateString('en-GB') : 'N/A',
-        appointment.time ? toAmPm(appointment.time) : 'N/A',
-        `Rs. ${(appointment.price || 0).toLocaleString()}`
-      ]);
-      
-      // Create table
-      autoTable(doc, {
-        head: [['#', 'Owner', 'Pet Name', 'Pet Type', 'Service', 'Vet', 'Date', 'Time', 'Price (Rs.)']],
-        body: tableData,
-        startY: 40,
-        headStyles: {
-          fillColor: [255, 165, 0],
-          textColor: [255, 255, 255],
-          fontStyle: 'bold'
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245]
-        },
-        styles: {
-          fontSize: 8,
-          cellPadding: 2
-        },
-        columnStyles: {
-          0: { halign: 'center', cellWidth: 10 }, // #
-          1: { cellWidth: 25 }, // Owner
-          2: { cellWidth: 20 }, // Pet Name
-          3: { cellWidth: 18 }, // Pet Type
-          4: { cellWidth: 25 }, // Service
-          5: { cellWidth: 20 }, // Vet
-          6: { cellWidth: 20 }, // Date
-          7: { cellWidth: 15 }, // Time
-          8: { cellWidth: 20 } // Price
-        }
-      });
-      
-      // Add summary
-      const finalY = doc.lastAutoTable.finalY + 10;
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text(`Total Appointments: ${filteredAppointments.length}`, 20, finalY);
-      
-      const totalIncome = filteredAppointments.reduce((sum, appointment) => sum + (Number(appointment.price) || 0), 0);
-      doc.text(`Total Income: Rs. ${totalIncome.toLocaleString()}`, 20, finalY + 8);
-      
-      // Save PDF
-      doc.save('appointments_report.pdf');
-      console.log('PDF saved successfully');
-      
-    } catch (error) {
-      console.error('PDF Error:', error);
-      alert('Error creating PDF: ' + error.message);
-    }
   };
 
   const filteredAppointments = appointmentList?.filter((appointment) => {
@@ -230,95 +113,19 @@ function AppointmentList({ isUserProfile = false }) {
   }
 
   return (
-    <div
-      className="w-full min-h-screen bg-gradient-to-br from-gray-50 via-amber-50/30 to-gray-50 px-5 py-6"
-      
-      
-      
-    >
+    <div className="w-full min-h-screen bg-gradient-to-br from-gray-50 via-amber-50/30 to-gray-50 px-5 py-6">
       {/* Header */}
       <div className="mb-8">
-        <h2
-          className="text-3xl font-bold text-gray-800 mb-2"
-          
-          
-          
-        >
+        <h2 className="text-3xl font-bold text-gray-800 mb-2">
           {isUserProfile ? "My Appointments" : "Appointments Details"}
         </h2>
-        <p
-          className="text-gray-600"
-          
-          
-          
-        >
+        <p className="text-gray-600">
           {isUserProfile ? "View and manage your scheduled appointments" : "Manage and track all pet appointments"}
         </p>
       </div>
 
-      {/* Statistics Cards - Only show in admin view */}
-      {isAdminView && !isUserProfile && (
-        <div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8"
-          
-          
-          
-        >
-          {/* Total Appointments Card */}
-          <div
-            className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg"
-            
-            
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold opacity-90">Total Appointments</h3>
-                <p className="text-3xl font-bold mt-2">{stats.totalAppointments}</p>
-                <p className="text-sm opacity-80 mt-1">
-                  {filteredAppointments?.length !== stats.totalAppointments && searchQuery 
-                    ? `${filteredAppointments?.length} filtered` 
-                    : "All appointments"}
-                </p>
-              </div>
-              <div className="bg-white/20 rounded-full p-3">
-                <FaCalendarAlt className="text-2xl" />
-              </div>
-            </div>
-          </div>
-
-          {/* Total Income Card */}
-          <div
-            className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white shadow-lg"
-            
-            
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold opacity-90">Total Income Value</h3>
-                <p className="text-3xl font-bold mt-2">
-                  Rs. {stats.totalIncome.toLocaleString()}
-                </p>
-                <p className="text-sm opacity-80 mt-1">
-                  {searchQuery && filteredAppointments?.length !== stats.totalAppointments
-                    ? `Rs. ${filteredAppointments?.reduce((sum, appointment) => sum + (Number(appointment.price) || 0), 0).toLocaleString()} filtered`
-                    : "Total revenue generated"}
-                </p>
-              </div>
-              <div className="bg-white/20 rounded-full p-3">
-                <FaDollarSign className="text-2xl" />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Search Bar and Action Buttons */}
-      <div 
-        className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between"
-        
-        
-        
-      >
+      <div className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
         {/* Search Bar */}
         <div className="w-full md:flex-1 md:max-w-lg">
           <div className="relative">
@@ -353,22 +160,9 @@ function AppointmentList({ isUserProfile = false }) {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3 w-full md:w-auto">
-          {isAdminView && !isUserProfile && (
-            <button
-              onClick={handleDownloadPDF}
-              className="flex-1 md:flex-none bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
-              
-              
-            >
-              <FaDownload className="text-lg" />
-              Download PDF
-            </button>
-          )}
           <button
             onClick={() => navigate("/appointmentAdd")}
             className="flex-1 md:flex-none bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-5 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
-            
-            
           >
             <FaPlus className="text-lg" />
             {isUserProfile ? "Book Appointment" : "Add Appointment"}
@@ -376,12 +170,7 @@ function AppointmentList({ isUserProfile = false }) {
         </div>
       </div>
 
-      <div 
-        className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100" 
-         
-         
-        
-      >
+      <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gradient-to-r from-amber-50 to-amber-100">
@@ -395,15 +184,7 @@ function AppointmentList({ isUserProfile = false }) {
                 <th className="px-6 py-4 text-center text-sm font-bold text-gray-700 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody
-              className="bg-white divide-y divide-gray-200"
-              initial="hidden"
-              animate="show"
-              variants={{
-                hidden: { opacity: 1 },
-                show: { opacity: 1, transition: { staggerChildren: 0.05 } },
-              }}
-            >
+            <tbody className="bg-white divide-y divide-gray-200">
               {(filteredAppointments?.length === 0) && (
                 <tr>
                   <td colSpan={7} className="px-6 py-16 text-center">
@@ -462,8 +243,6 @@ function AppointmentList({ isUserProfile = false }) {
                       <button
                         className="inline-flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
                         onClick={() => handleUpdate(appointment)}
-                        
-                        
                       >
                         <FaPen className="text-xs" />
                         Edit
@@ -471,8 +250,6 @@ function AppointmentList({ isUserProfile = false }) {
                       <button
                         className="inline-flex items-center gap-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
                         onClick={() => handleDelete(appointment._id)}
-                        
-                        
                       >
                         <MdDelete className="text-sm" />
                         Delete
