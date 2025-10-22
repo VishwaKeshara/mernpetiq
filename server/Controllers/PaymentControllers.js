@@ -661,7 +661,7 @@ export const getAllPayments = async (req, res) => {
   }
 };
 
-// Direct no-auth admin payments endpoint
+
 export const getAdminPaymentsNoAuth = async (req, res) => {
   console.log("⭐ No-auth admin payments endpoint called with query:", req.query);
   try {
@@ -707,7 +707,7 @@ export const getAdminPaymentsNoAuth = async (req, res) => {
   }
 };
 
-// Direct no-auth admin payments bulk delete endpoint
+
 export const deleteAdminPaymentsNoAuth = async (req, res) => {
   console.log("⭐ No-auth admin payments bulk delete called");
   try {
@@ -719,8 +719,7 @@ export const deleteAdminPaymentsNoAuth = async (req, res) => {
     
     console.log(`Attempting to delete ${ids.length} payment records with IDs:`, ids);
     
-    // Create a query that matches records with either _id or piId in the provided list
-    // This handles both types of IDs we might receive
+    
     const query = {
       $or: [
         { _id: { $in: ids } },
