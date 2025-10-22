@@ -370,7 +370,10 @@ async function resolveMartDelivery(req) {
       const addr = await Address.findById(normalizedAddressId).lean();
       if (addr) {
         console.log("[MART delivery] using address by id:", normalizedAddressId);
-        return buildShippingFromAddressDoc(addr);
+        const result = buildShippingFromAddressDoc(addr);
+        // Add the address ID to shipping metadata for invoice generation
+        result.shippingMeta.delivery_address_id = normalizedAddressId;
+        return result;
       }
       console.warn("[MART delivery] address not found by id:", normalizedAddressId);
     } catch (e) {
@@ -383,7 +386,12 @@ async function resolveMartDelivery(req) {
     const latest = await Address.findOne({ userId }).sort({ updatedAt: -1, createdAt: -1 }).lean();
     if (latest) {
       console.log("[MART delivery] using latest address for userId:", userId);
-      return buildShippingFromAddressDoc(latest);
+      const result = buildShippingFromAddressDoc(latest);
+      // Add the address ID to shipping metadata for invoice generation
+      if (latest._id) {
+        result.shippingMeta.delivery_address_id = latest._id.toString();
+      }
+      return result;
     }
   } catch (e) {
     console.warn("[MART delivery] latest address lookup failed:", e?.message || e);
@@ -560,7 +568,15 @@ export const createPaymentIntent = async (req, res) => {
     
     const displayRef = apptPrettyRef || martPrettyRef || incomingRef || "";
 
-    // Save transaction
+    // Save transaction with explicit delivery address ID
+    const txMetadata = {...paymentIntent.metadata};
+    
+    // For mart payments, ensure the delivery_address_id is explicitly set in metadata
+    if (src === "mart" && req.body.address_id) {
+      console.log("Explicitly setting delivery_address_id in transaction:", req.body.address_id);
+      txMetadata.delivery_address_id = req.body.address_id;
+    }
+    
     await Tx.create({
       piId: paymentIntent.id,
       amount: paymentIntent.amount, 
@@ -571,7 +587,7 @@ export const createPaymentIntent = async (req, res) => {
       description: description || (src === "mart" ? "Mart purchase payment" : "Hospital appointment payment"),
       stripe_customer: customer,
       payment_method,
-      metadata: paymentIntent.metadata,
+      metadata: txMetadata,
 
       
       amount_lkr: amount_lkr,
@@ -641,6 +657,99 @@ export const getAllPayments = async (req, res) => {
       success: false,
       message: "Error fetching all payments",
       error: error.message,
+    });
+  }
+};
+
+// Direct no-auth admin payments endpoint
+export const getAdminPaymentsNoAuth = async (req, res) => {
+  console.log("⭐ No-auth admin payments endpoint called with query:", req.query);
+  try {
+    // Build filter object based on query parameters
+    const filter = {};
+    
+    // Filter by source (hospital, mart, etc)
+    if (req.query.source && req.query.source !== "any") {
+      filter.source = req.query.source;
+    }
+    
+    // Filter by reference ID or payment intent ID (partial match)
+    if (req.query.ref) {
+      const searchText = req.query.ref;
+      // Use $or to search in multiple fields
+      filter.$or = [
+        { ref_id: { $regex: searchText, $options: "i" } },
+        { piId: { $regex: searchText, $options: "i" } }
+      ];
+    }
+    
+    // Filter by description/service (partial match)
+    if (req.query.service) {
+      filter.description = { $regex: req.query.service, $options: "i" };
+    }
+    
+    // Filter by status
+    if (req.query.status && req.query.status !== "any") {
+      filter.status = req.query.status;
+    }
+    
+    console.log("Applying filter:", JSON.stringify(filter));
+    const transactions = await Tx.find(filter).sort({ createdAt: -1 });
+    console.log(`Found ${transactions.length} filtered payment transactions`);
+    return res.json(transactions);
+  } catch (error) {
+    console.error("Error in no-auth admin payments endpoint:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching payments data",
+      error: error.message
+    });
+  }
+};
+
+// Direct no-auth admin payments bulk delete endpoint
+export const deleteAdminPaymentsNoAuth = async (req, res) => {
+  console.log("⭐ No-auth admin payments bulk delete called");
+  try {
+    const { ids } = req.body;
+    
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "No IDs provided for deletion" });
+    }
+    
+    console.log(`Attempting to delete ${ids.length} payment records with IDs:`, ids);
+    
+    // Create a query that matches records with either _id or piId in the provided list
+    // This handles both types of IDs we might receive
+    const query = {
+      $or: [
+        { _id: { $in: ids } },
+        { piId: { $in: ids } }
+      ]
+    };
+    
+    const result = await Tx.deleteMany(query);
+    
+    console.log(`Delete operation result:`, result);
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: "No matching records found for deletion" 
+      });
+    }
+    
+    return res.json({ 
+      success: true, 
+      deletedCount: result.deletedCount,
+      message: `Successfully deleted ${result.deletedCount} payment record(s)`
+    });
+  } catch (error) {
+    console.error("Error in no-auth admin payments bulk delete:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error deleting payment records",
+      error: error.message
     });
   }
 };

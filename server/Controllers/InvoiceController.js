@@ -95,7 +95,7 @@ function labelValueRow(doc, label, value, x, rightX, y, labelW, valueW) {
 }
 
 
-async function buildTxView({ tx, pi }) {
+async function buildTxView({ tx, pi, deliveryAddressId }) {
   let amount_lkr =
     toNum(tx?.amount_lkr) ??
     toNum(tx?.metadata?.original_amount_lkr) ??
@@ -131,14 +131,66 @@ async function buildTxView({ tx, pi }) {
 
   let address = null;
   if (source === "mart") {
-    const addressId =
-      pi?.metadata?.address_id ||
-      tx?.metadata?.address_id ||
-      pi?.metadata?.delivery_address_id ||
-      pi?.metadata?.addressId ||
-      "";
-    if (addressId) {
-      try { address = await Address.findById(addressId).lean(); } catch {}
+    // First priority: Check explicitly provided delivery address ID
+    if (deliveryAddressId) {
+      try {
+        address = await Address.findById(deliveryAddressId).lean();
+        if (address) {
+          console.log("DIRECT HIT: Using delivery address from explicit parameter:", deliveryAddressId);
+        }
+      } catch (e) {
+        console.error("Error finding address by explicit parameter:", deliveryAddressId, e);
+      }
+    }
+    
+    // If we still don't have an address, try other sources
+    if (!address) {
+      // Get from local storage through query params (priority order)
+      const lsAddressId = tx?.metadata?.vms_selectedAddressId || pi?.metadata?.vms_selectedAddressId;
+      if (lsAddressId) {
+        try {
+          address = await Address.findById(lsAddressId).lean();
+          if (address) {
+            console.log("SUCCESS: Found address from vms_selectedAddressId:", lsAddressId);
+          }
+        } catch (e) {
+          console.error("Error with vms_selectedAddressId:", e);
+        }
+      }
+    }
+    
+    // If we still don't have an address, try metadata fields
+    if (!address) {
+      let addressId = "";
+      
+      if (tx?.metadata?.delivery_address_id) {
+        addressId = tx.metadata.delivery_address_id;
+        console.log("Using delivery_address_id from transaction metadata:", addressId);
+      } else if (tx?.metadata?.address_id) {
+        addressId = tx.metadata.address_id;
+        console.log("Using address_id from transaction metadata:", addressId);
+      } else if (pi?.metadata?.address_id) {
+        addressId = pi.metadata.address_id;
+        console.log("Using address_id from payment intent metadata:", addressId);
+      } else if (pi?.metadata?.delivery_address_id) {
+        addressId = pi.metadata.delivery_address_id;
+        console.log("Using delivery_address_id from payment intent metadata:", addressId);
+      } else if (tx?.metadata?.addressId) {
+        addressId = tx.metadata.addressId;
+        console.log("Using addressId from transaction metadata:", addressId);
+      } else if (pi?.metadata?.addressId) {
+        addressId = pi.metadata.addressId;
+        console.log("Using addressId from payment intent metadata:", addressId);
+      }
+      
+      if (addressId) {
+        try { 
+          address = await Address.findById(addressId).lean();
+          console.log("Found delivery address by ID:", addressId);
+        } catch (e) {
+          console.error("Error finding address by ID:", addressId, e);
+        }
+      }
     }
     if (!address && pi?.shipping?.address) {
       const a = pi.shipping.address;
@@ -393,6 +445,8 @@ export async function getInvoice(req, res) {
   try {
     const ref_id = (req.query.ref_id || "").toString().trim();
     const payment_intent_id = (req.query.payment_intent_id || "").toString().trim();
+    // Get delivery address ID from query parameters
+    const deliveryAddressId = req.query.deliveryAddressId || req.query.addressId || "";
 
     let tx = null;
     if (ref_id) tx = await Tx.findOne({ ref_id }).sort({ createdAt: -1 }).lean();
@@ -409,7 +463,8 @@ export async function getInvoice(req, res) {
 
     if (!tx && !pi) return res.status(404).json({ error: "Invoice not found for provided parameters." });
 
-    const view = await buildTxView({ tx, pi });
+    // Pass the delivery address ID to buildTxView
+    const view = await buildTxView({ tx, pi, deliveryAddressId });
     const base = view.ref || "payment";
     sendPdf(res, `Invoice-${base}.pdf`, view);
   } catch (e) {
@@ -421,6 +476,9 @@ export async function getInvoice(req, res) {
 export async function getInvoiceByParam(req, res) {
   try {
     const id = (req.params.id || "").toString().trim();
+    
+    // Get the delivery address ID from query parameters if present
+    const deliveryAddressId = req.query.deliveryAddressId || req.query.addressId || "";
 
     let tx = null;
     if (id.startsWith("pi_")) tx = await Tx.findOne({ piId: id }).lean();
@@ -434,7 +492,7 @@ export async function getInvoiceByParam(req, res) {
 
     if (!tx && !pi) return res.status(404).json({ error: "Invoice not found." });
 
-    const view = await buildTxView({ tx, pi });
+    const view = await buildTxView({ tx, pi, deliveryAddressId });
     const base = view.ref || "payment";
     sendPdf(res, `Invoice-${base}.pdf`, view);
   } catch (e) {

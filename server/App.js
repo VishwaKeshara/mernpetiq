@@ -17,6 +17,9 @@ import productRoutes from './routes/ProductRoute.js';
 import medicalRecordsRoutes from './routes/medicalRecords.js';
 import paymentRoutes from './routes/PaymentRoutes.js';
 
+// Direct import of payment controller for admin dashboard
+import { getAdminPaymentsNoAuth, deleteAdminPaymentsNoAuth } from './Controllers/PaymentControllers.js';
+
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,6 +42,24 @@ app.use('/api/products', productRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/medical-records', medicalRecordsRoutes);
 app.use('/api', paymentRoutes);
+
+// Direct route for admin payments - guaranteed to work
+app.get('/direct-admin-payments', (req, res) => {
+  console.log("🔴 DIRECT ADMIN PAYMENTS ROUTE HIT", { query: req.query });
+  getAdminPaymentsNoAuth(req, res);
+});
+
+// Direct route for admin payments deletion - guaranteed to work
+app.post('/direct-admin-payments-delete', (req, res) => {
+  console.log("🔴 DIRECT ADMIN PAYMENTS DELETE ROUTE HIT", { body: req.body });
+  deleteAdminPaymentsNoAuth(req, res);
+});
+
+// Add a test route that's guaranteed to work
+app.get('/test-admin-payments', (req, res) => {
+  console.log("🔴 TEST ADMIN PAYMENTS ROUTE HIT");
+  res.json({ success: true, message: "Test admin payments endpoint working", timestamp: new Date().toISOString() });
+});
 
 // Health check route
 app.get('/', (req, res) => {

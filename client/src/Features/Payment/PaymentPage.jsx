@@ -1104,11 +1104,24 @@ export default function PaymentPage() {
         finalSnapshot = findAnyAddressInLocalStorage();
       }
 
-      if (selectedAddressId) paymentData.address_id = selectedAddressId;
+      if (selectedAddressId) {
+        paymentData.address_id = selectedAddressId;
+        // Set both fields to ensure we catch it in both ways
+        paymentData.delivery_address_id = selectedAddressId;
+        console.log("Setting address ID for payment:", selectedAddressId);
+      }
 
       if (finalSnapshot) {
         const norm = normalizeAddressSnapshot(finalSnapshot);
         paymentData.delivery = { ...norm };
+        
+        // If we have the address ID in the snapshot, ensure it's set
+        if (finalSnapshot._id && !paymentData.address_id) {
+          paymentData.address_id = finalSnapshot._id;
+          paymentData.delivery_address_id = finalSnapshot._id;
+          console.log("Setting address ID from snapshot:", finalSnapshot._id);
+        }
+        
         deliverySnapshotForSuccess = { ...norm };
         setSuccessDelivery({ ...norm });
         setInvoiceSnapshotIfBetter(norm);
@@ -1299,6 +1312,122 @@ export default function PaymentPage() {
   }
 
   
+  // Helper function to score address snapshots based on completeness
+  function scoreDelivery(snapshot) {
+    if (!snapshot) return 0;
+    let score = 0;
+    
+    // Basic fields
+    if (snapshot.firstName) score += 1;
+    if (snapshot.lastName) score += 1;
+    if (snapshot.phone) score += 2;
+    
+    // Address fields
+    if (snapshot.line1) score += 3;
+    if (snapshot.line2) score += 1;
+    if (snapshot.city) score += 2;
+    if (snapshot.state) score += 1;
+    if (snapshot.postalCode) score += 1;
+    if (snapshot.country) score += 1;
+    
+    return score;
+  }
+  
+  // Store the best invoice snapshot in localStorage
+  function setInvoiceSnapshotIfBetter(snapshot) {
+    if (!snapshot) return;
+    
+    try {
+      const existing = localStorage.getItem(LS_INVOICE_DELIVERY);
+      if (existing) {
+        const parsed = JSON.parse(existing);
+        const normalized = normalizeAddressSnapshot(parsed);
+        const existingScore = scoreDelivery(normalized);
+        const newScore = scoreDelivery(snapshot);
+        
+        if (newScore <= existingScore) return; // Keep existing if it's better
+      }
+      
+      localStorage.setItem(LS_INVOICE_DELIVERY, JSON.stringify(snapshot));
+      if (typeof window !== 'undefined') window.__LAST_DELIVERY__ = snapshot;
+    } catch (err) {
+      console.debug("Failed to save invoice snapshot:", err);
+    }
+  }
+  
+  // Find any address-like object in localStorage
+  function findAnyAddressInLocalStorage() {
+    if (typeof window === 'undefined' || !window.localStorage) return null;
+    
+    const addressKeys = [
+      "selectedAddress",
+      "mart:selectedAddress", 
+      "address:selected_json",
+      "deliveryAddress",
+      "shippingAddress",
+      "billingAddress",
+      "lastUsedAddress",
+      "userAddress",
+      "defaultAddress",
+    ];
+    
+    for (const key of addressKeys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        
+        const parsed = JSON.parse(raw);
+        const normalized = normalizeAddressSnapshot(parsed);
+        if (normalized) return normalized;
+      } catch {}
+    }
+    
+    return null;
+  }
+  
+  // Try to fetch delivery information from the server by ref ID or payment intent ID
+  async function tryFetchDeliveryByRefOrPI({ refId, piId }) {
+    if (!refId && !piId) return null;
+    
+    try {
+      // Try to get payment details which might contain address info
+      const params = {};
+      if (refId) params.ref_id = refId;
+      if (piId) params.payment_intent_id = piId;
+      
+      const { data } = await paymentBaseURL.get("/payments/details", { params });
+      if (!data) return null;
+      
+      // Extract delivery from the payment data
+      return extractDeliveryFromAny(data);
+    } catch (err) {
+      console.debug("Failed to fetch delivery by ref/pi:", err);
+      return null;
+    }
+  }
+  
+  // Using the existing joinAddressParts function defined at the top of the file
+
+  // Choose the best delivery snapshot from multiple sources
+  function bestDeliverySnapshot(...snapshots) {
+    let best = null;
+    let bestScore = -1;
+    
+    for (const snapshot of snapshots) {
+      if (!snapshot) continue;
+      const normalized = normalizeAddressSnapshot(snapshot);
+      if (!normalized) continue;
+      
+      const score = scoreDelivery(normalized);
+      if (score > bestScore) {
+        best = normalized;
+        bestScore = score;
+      }
+    }
+    
+    return best;
+  }
+
   async function resolveDeliverySnapshotNow({ refId, piId }) {
     
     const fromState = successDelivery || null;
@@ -1345,6 +1474,9 @@ export default function PaymentPage() {
     );
 
     if (best) setInvoiceSnapshotIfBetter(best);
+    
+    // Return the best delivery snapshot
+    return best;
     return best;
   }
 
@@ -1544,9 +1676,11 @@ if (source === "mart" && Array.isArray(successMartItems) && successMartItems.len
       };
 
       if (source === "mart") {
-        const name = delivery ? `${(delivery.firstName || "").trim()} ${(delivery.lastName || "").trim()}`.trim() : "";
-        const phone = delivery?.phone || "";
-        const address = delivery ? joinAddressParts(delivery) : "";
+        // Use deliveryOverride if provided, otherwise fall back to delivery from state
+        const deliveryData = deliveryOverride || delivery;
+        const name = deliveryData ? `${(deliveryData.firstName || "").trim()} ${(deliveryData.lastName || "").trim()}`.trim() : "";
+        const phone = deliveryData?.phone || "";
+        const address = deliveryData ? joinAddressParts(deliveryData) : "";
         row("Recipient", name || "—");
         row("Phone", phone || "—");
         row("Address", address || "—", true);
@@ -1664,6 +1798,8 @@ if (source === "mart" && Array.isArray(successMartItems) && successMartItems.len
 
     setDownloadingInvoice(true);
     try {
+      // Get the selected address ID
+      const { addressId: selectedAddressId } = getSelectedAddressInfo();
       
       const deliveryNow = await resolveDeliverySnapshotNow({ refId, piId });
 
@@ -1678,18 +1814,30 @@ if (source === "mart" && Array.isArray(successMartItems) && successMartItems.len
       const attempts = [];
 
       if (refId) {
-        attempts.push(() => tryGetPdf(`/payments/${encodeURIComponent(refId)}/invoice`));
-        attempts.push(() => tryGetPdf(`/invoice`, { params: { ref_id: refId } }));
-        attempts.push(() => tryGetPdf(`/payment/${encodeURIComponent(refId)}/invoice`));
+        // Pass the selected address ID to the invoice endpoint
+        attempts.push(() => tryGetPdf(`/payments/${encodeURIComponent(refId)}/invoice`, { 
+          params: { deliveryAddressId: selectedAddressId } 
+        }));
+        attempts.push(() => tryGetPdf(`/invoice`, { 
+          params: { ref_id: refId, deliveryAddressId: selectedAddressId } 
+        }));
+        attempts.push(() => tryGetPdf(`/payment/${encodeURIComponent(refId)}/invoice`, { 
+          params: { deliveryAddressId: selectedAddressId } 
+        }));
       }
       if (piId) {
-        attempts.push(() => tryGetPdf(`/payments/${encodeURIComponent(piId)}/invoice`));
-        attempts.push(() => tryGetPdf(`/invoice`, { params: { payment_intent_id: piId } }));
+        attempts.push(() => tryGetPdf(`/payments/${encodeURIComponent(piId)}/invoice`, { 
+          params: { deliveryAddressId: selectedAddressId } 
+        }));
+        attempts.push(() => tryGetPdf(`/invoice`, { 
+          params: { payment_intent_id: piId, deliveryAddressId: selectedAddressId } 
+        }));
       }
       attempts.push(() =>
         tryPostPdf(`/invoice`, {
           ref_id: refId || undefined,
           payment_intent_id: piId || undefined,
+          deliveryAddressId: selectedAddressId || undefined,
         })
       );
 

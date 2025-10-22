@@ -23,7 +23,25 @@ router.get("/invoice", getInvoice);
 router.get("/payments/:id/invoice", getInvoiceByParam); 
 
 
+// Admin access to payments data
 router.get("/payments", PaymentController.getAllPayments);
+
+// Ensure this route has proper error handling
+router.get("/payments-debug", async (req, res) => {
+  try {
+    const filter = {};
+    const transactions = await Tx.find(filter).sort({ createdAt: -1 });
+    console.log(`Found ${transactions.length} payment transactions`);
+    res.json(transactions);
+  } catch (error) {
+    console.error("Payment query error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching payments (debug route)",
+      error: error.message,
+    });
+  }
+});
 
 
 router.post("/admin/tx/bulk-delete", async (req, res) => {

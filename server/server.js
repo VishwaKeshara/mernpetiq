@@ -8,6 +8,8 @@ import productRoutes from './routes/ProductRoute.js';
 import appointmentRouter from './routes/AppointmentRoutes.js';
 import medicalRecordsRouter from './routes/medicalRecords.js';
 import paymentRoutes from './routes/PaymentRoutes.js';
+import adminPaymentRoutes from './routes/AdminPaymentRoutes.js';
+import publicAdminRoutes from './routes/PublicAdminRoutes.js';
 
 
 dotenv.config();
@@ -22,9 +24,12 @@ app.use(cors({
 }));
 app.use(express.json()); // allows us to accept JSON data in the req.body
 
-// Add enhanced logging middleware
+// Add enhanced logging middleware with payment routes highlighted
 app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Headers:`, 
+    const isPossiblePaymentRoute = req.path.includes('payment') || req.path === '/payments';
+    const logPrefix = isPossiblePaymentRoute ? '🔴 PAYMENT ROUTE:' : '🔹 Route:';
+    
+    console.log(`${logPrefix} ${new Date().toISOString()} - ${req.method} ${req.path} - Headers:`, 
         JSON.stringify({
             host: req.headers.host,
             'user-agent': req.headers['user-agent']
@@ -158,11 +163,32 @@ app.get('/test-route', (req, res) => {
   res.json({ success: true, message: 'Test route working' });
 });
 
+// Direct import of payment controller for admin dashboard
+import { getAdminPaymentsNoAuth } from './Controllers/PaymentControllers.js';
+
+// Direct route for admin payments - guaranteed to work
+app.get('/direct-admin-payments', (req, res) => {
+  console.log("🔴 DIRECT ADMIN PAYMENTS ROUTE HIT");
+  getAdminPaymentsNoAuth(req, res);
+});
+
+// Add a test route that's guaranteed to work
+app.get('/test-admin-payments', (req, res) => {
+  console.log("🔴 TEST ADMIN PAYMENTS ROUTE HIT");
+  res.json({ success: true, message: "Test admin payments endpoint working", timestamp: new Date().toISOString() });
+});
+
 // Other API routes
 app.use("/api/products", productRoutes)
 app.use("/api/appointments", appointmentRouter);
 app.use('/api/medical-records', medicalRecordsRouter);
 app.use('/', paymentRoutes);
+
+// Mount admin routes
+app.use('/api/admin', adminPaymentRoutes);
+
+// Mount public admin routes - no authentication required
+app.use('/', publicAdminRoutes);
 
 // Let's try a different approach
 

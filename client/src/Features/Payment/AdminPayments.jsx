@@ -8,7 +8,8 @@ const API_BASE =
   "http://localhost:5000";
 
 export default function AdminPayments() {
-  const PAYMENT_API = `${API_BASE}/api/payment`;
+  // Hard-code the API base for maximum reliability
+  const PAYMENT_API = `http://localhost:5000`;
 
   
   const [source, setSource] = useState("any");
@@ -59,6 +60,7 @@ export default function AdminPayments() {
     setError("");
     setSelected(new Set());
     try {
+      // Build query parameters
       const params = new URLSearchParams();
       if (source && source !== "any") params.set("source", source);
       const refClean = refText.trim();
@@ -66,16 +68,32 @@ export default function AdminPayments() {
       const svcClean = serviceText.trim();
       if (svcClean) params.set("service", svcClean);
       if (status && status !== "any") params.set("status", status);
-      // Date filters are applied client-side to guarantee it works.
-
-      const url = `${PAYMENT_API}/payments${params.toString() ? `?${params.toString()}` : ""}`;
+      
+      // Now try the real endpoint with query parameters
+      console.log("Using direct payments endpoint with filters:", Object.fromEntries(params));
+      const url = `${PAYMENT_API}/direct-admin-payments?${params.toString()}`;
+      console.log("Fetching payment records from URL:", url);
+      
       const res = await fetch(url);
+      console.log("Response status:", res.status, res.statusText);
+      
+      if (!res.ok) {
+        console.error("Error response:", res.status, res.statusText);
+        throw new Error(`Server returned ${res.status}: ${res.statusText}`);
+      }
+      
       const data = await res.json();
-      if (!Array.isArray(data)) throw new Error("Unexpected response");
+      console.log("Payment data received:", data.length, "records");
+      
+      if (!Array.isArray(data)) {
+        console.error("Unexpected data format:", data);
+        throw new Error("Unexpected response");
+      }
+      
       setRows(data);
       setPage(1);
     } catch (e) {
-      console.error(e);
+      console.error("Fetch error:", e);
       setError(e.message || "Failed to load transactions");
       setRows([]);
     } finally {
@@ -115,29 +133,79 @@ export default function AdminPayments() {
     else setSelected(new Set(rowsFilteredByDate.map((r) => r._id || r.piId)));
   };
 
+  // Enhanced selection toggle with better logging and validation
   const toggleOne = (id) => {
+    if (!id) {
+      console.error("Attempted to toggle selection with invalid ID:", id);
+      return;
+    }
+    
+    console.log("Toggling selection for ID:", id);
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+        console.log("Removed ID from selection:", id);
+      }
+      else {
+        next.add(id);
+        console.log("Added ID to selection:", id, "- Total selected:", next.size + 1);
+      }
       return next;
     });
   };
 
   async function clearSelected() {
     if (selected.size === 0) return;
+    
+    // Show confirmation dialog
     if (!window.confirm(`Delete ${selected.size} record(s)?`)) return;
+    
     try {
-      const res = await fetch(`${PAYMENT_API}/admin/tx/bulk-delete`, {
+      // Get selected IDs and validate them
+      const selectedIds = Array.from(selected).filter(id => id);
+      console.log("Deleting selected records:", selectedIds);
+      
+      if (selectedIds.length === 0) {
+        throw new Error("No valid IDs selected for deletion");
+      }
+      
+      // Optimistically update UI - remove deleted items from rows
+      const remainingRows = rows.filter(row => {
+        const rowId = row._id || row.piId;
+        return !selectedIds.includes(rowId);
+      });
+      
+      setRows(remainingRows);
+      console.log(`Optimistically removed ${rows.length - remainingRows.length} rows from UI`);
+      
+      // Call API to delete records
+      const res = await fetch(`${PAYMENT_API}/direct-admin-payments-delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: Array.from(selected) }),
+        body: JSON.stringify({ ids: selectedIds }),
       });
+      
       const out = await res.json();
-      if (!res.ok || out.error) throw new Error(out.error || "Delete failed");
+      console.log("Delete response:", out);
+      
+      if (!res.ok || out.error) {
+        throw new Error(out.error || "Delete failed");
+      }
+      
+      // Clear selection
+      setSelected(new Set());
+      
+      // Refresh data from server to ensure consistency
+      console.log("Refreshing data from server after delete");
       await fetchTx();
+      
     } catch (e) {
+      console.error("Error deleting records:", e);
       alert(e.message || "Delete failed");
+      
+      // Refresh data in case of error to ensure UI is consistent
+      await fetchTx();
     }
   }
 
@@ -234,7 +302,7 @@ export default function AdminPayments() {
             <input
               value={refText}
               onChange={(e) => setRefText(e.target.value)}
-              placeholder="Reference, PI ID…"
+              placeholder="Reference or Payment ID…"
               className="w-full border rounded-md h-10 pl-9 pr-3"
             />
           </div>
@@ -381,7 +449,25 @@ export default function AdminPayments() {
 
             {!loading &&
               pageRows.map((r) => {
-                const id = r._id || r.piId;
+                // Make sure we have a valid ID for each record
+                let id = null;
+                
+                // Try to get MongoDB _id first (most reliable)
+                if (r._id) {
+                  id = r._id;
+                } 
+                // Fall back to payment intent ID if _id is not available
+                else if (r.piId) {
+                  id = r.piId;
+                }
+                
+                console.log("Row data:", { 
+                  rowId: id, 
+                  _id: r._id, 
+                  piId: r.piId,
+                  hasValidId: !!id
+                });
+                
                 const displayCurrency = (r.display_currency || "lkr").toUpperCase();
                 const dateStr = r.createdAt
                   ? new Date(r.createdAt).toLocaleString()
