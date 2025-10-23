@@ -220,18 +220,26 @@ function Home() {
                                     )}
                                   </div>
                                   
-                                  <button
-                                    
-                                    
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAddToCart(product);
-                                    }}
-                                    className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-3 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm text-sm"
-                                  >
-                                    <FaShoppingCart size={12} />
-                                    Add to Cart
-                                  </button>
+                                  {product.stock > 0 ? (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAddToCart(product);
+                                      }}
+                                      className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-3 py-2 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm text-sm"
+                                    >
+                                      <FaShoppingCart size={12} />
+                                      Add to Cart
+                                    </button>
+                                  ) : (
+                                    <button
+                                      disabled
+                                      className="w-full bg-gray-400 text-gray-600 px-3 py-2 rounded-lg font-medium flex items-center justify-center gap-2 shadow-sm text-sm cursor-not-allowed"
+                                    >
+                                      <FaShoppingCart size={12} />
+                                      Out of Stock
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </div>

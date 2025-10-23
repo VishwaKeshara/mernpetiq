@@ -4,6 +4,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { SidebarProvider } from "./context/SidebarContext";
 
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";      
@@ -38,13 +39,17 @@ import AdminCards from "./Features/Payment/AdminCards";
 import AdminAddresses from "./Features/Delivery/AdminAddresses";
 
 import VetDashboard from "./Features/medicalRecords/vetDashboard";
-
+import { useSidebar } from "./context/SidebarContext";
 
 const AdminLayout = () => {
+  const { isOpen } = useSidebar();
+  
   return (
-    <div className="flex min-h-screen">
+    <div className="min-h-screen">
       <Sidebar />
-      <div className="flex-1 bg-gray-50 p-6">
+      <div className={`bg-gray-50 p-6 min-h-screen transition-all duration-300 ${
+        isOpen ? "ml-64" : "ml-16"
+      }`}>
         <Outlet />
       </div>
     </div>
@@ -106,7 +111,11 @@ function App() {
 
 
 
-          <Route path="/admin" element={<AdminLayout />}>
+          <Route path="/admin" element={
+            <SidebarProvider>
+              <AdminLayout />
+            </SidebarProvider>
+          }>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="profile" element={<ProfileManagement />} />
             <Route path="userlist" element={<Employees />} />

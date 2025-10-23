@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
+import { productBaseURL } from '../axiosinstance';
 
 const CartContext = createContext();
 
@@ -33,21 +35,60 @@ export const CartProvider = ({ children }) => {
 
   // Add item to cart
   const addToCart = (product, quantity = 1) => {
-    setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item._id === product._id);
-      
-      if (existingItem) {
-        // Update quantity if item already exists
-        return prevItems.map(item =>
-          item._id === product._id
-            ? { ...item, quantity: Math.min(item.quantity + quantity, product.stock) }
-            : item
+    const existingItem = cartItems.find(item => item._id === product._id);
+    
+    if (existingItem) {
+      // Update quantity if item already exists
+      const newQuantity = Math.min(existingItem.quantity + quantity, product.stock);
+      if (newQuantity > existingItem.quantity) {
+        setCartItems(prevItems =>
+          prevItems.map(item =>
+            item._id === product._id
+              ? { ...item, quantity: newQuantity }
+              : item
+          )
         );
+        toast.success(`Updated ${product.name} quantity in cart!`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
       } else {
-        // Add new item
-        return [...prevItems, { ...product, quantity: Math.min(quantity, product.stock) }];
+        toast.warning(`Cannot add more ${product.name} - stock limit reached!`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
       }
-    });
+    } else {
+      // Add new item
+      if (product.stock > 0) {
+        setCartItems(prevItems => [...prevItems, { ...product, quantity: Math.min(quantity, product.stock) }]);
+        toast.success(`${product.name} added to cart!`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      } else {
+        toast.error(`${product.name} is out of stock!`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    }
   };
 
   // Remove item from cart
@@ -105,6 +146,71 @@ export const CartProvider = ({ children }) => {
     setIsCartOpen(prev => !prev);
   };
 
+  // Process purchase and update stock levels
+  const processPurchase = async () => {
+    if (cartItems.length === 0) {
+      toast.error('Cart is empty!');
+      return false;
+    }
+
+    try {
+      // Update stock for each item in cart
+      const stockUpdatePromises = cartItems.map(async (item) => {
+        try {
+          const response = await productBaseURL.patch(`/${item._id}/stock`, {
+            quantity: item.quantity
+          });
+          
+          if (!response.data.success) {
+            throw new Error(`Failed to update stock for ${item.name}`);
+          }
+          
+          return {
+            success: true,
+            productName: item.name,
+            newStock: response.data.data.stock
+          };
+        } catch (error) {
+          return {
+            success: false,
+            productName: item.name,
+            error: error.response?.data?.message || error.message
+          };
+        }
+      });
+
+      const results = await Promise.all(stockUpdatePromises);
+      
+      // Check if all stock updates were successful
+      const failedUpdates = results.filter(result => !result.success);
+      
+      if (failedUpdates.length > 0) {
+        // Some stock updates failed
+        const errorMessages = failedUpdates.map(result => 
+          `${result.productName}: ${result.error}`
+        ).join(', ');
+        
+        toast.error(`Stock update failed for: ${errorMessages}`);
+        return false;
+      }
+
+      // All stock updates successful
+      const updatedProducts = results.length;
+      
+      toast.success(`Purchase successful! Stock updated for ${updatedProducts} product${updatedProducts > 1 ? 's' : ''}.`);
+      
+      // Note: Cart will be cleared by the payment handler, not here
+      // This allows for proper order completion flow
+      
+      return true;
+      
+    } catch (error) {
+      console.error('Error processing purchase:', error);
+      toast.error('Failed to process purchase. Please try again.');
+      return false;
+    }
+  };
+
   const value = {
     cartItems,
     isCartOpen,
@@ -116,7 +222,8 @@ export const CartProvider = ({ children }) => {
     isInCart,
     getItemQuantity,
     toggleCart,
-    setIsCartOpen
+    setIsCartOpen,
+    processPurchase
   };
 
   return (
