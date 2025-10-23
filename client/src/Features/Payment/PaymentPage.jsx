@@ -679,6 +679,7 @@ function BrandIcon({ brand }) {
 export default function PaymentPage() {
   const cartCtx = useCart();
   const clearCart = cartCtx?.clearCart ?? (() => {});
+  const processPurchase = cartCtx?.processPurchase ?? (() => Promise.resolve(false));
   const stripe = useStripe();
   const elements = useElements();
 
@@ -1013,7 +1014,20 @@ export default function PaymentPage() {
   }
 
   
-  function clearCartAfterPayment() {
+  async function clearCartAfterPayment() {
+    // Process purchase and update stock levels before clearing cart
+    try {
+      const purchaseSuccess = await processPurchase();
+      if (!purchaseSuccess) {
+        console.error('Failed to process purchase and update stock levels');
+        // Still continue with clearing cart even if stock update fails
+        // to avoid duplicate orders, but log the error
+      }
+    } catch (error) {
+      console.error('Error processing purchase:', error);
+    }
+
+    // Clear cart from context and localStorage
     try { clearCart(); } catch {}
     try { paymentBaseURL.post("/cart/clear").catch(() => {}); } catch {}
     try {

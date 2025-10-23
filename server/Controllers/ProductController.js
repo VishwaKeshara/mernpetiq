@@ -94,3 +94,48 @@ export const deleteProduct = async (req , res) => {
     }
 
 };  
+
+// Update Product Stock (for purchases)
+export const updateProductStock = async (req, res) => {
+    const { id } = req.params;
+    const { quantity } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(404).json({ success: false, message: "Invalid Product Id" });
+    }
+
+    if (typeof quantity !== 'number' || quantity <= 0) {
+        return res.status(400).json({ success: false, message: "Quantity must be a positive number" });
+    }
+
+    try {
+        const product = await Product.findById(id);
+        
+        if (!product) {
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
+
+        if (product.stock < quantity) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Insufficient stock. Available: ${product.stock}, Requested: ${quantity}` 
+            });
+        }
+
+        const updatedProduct = await Product.findByIdAndUpdate(
+            id,
+            { $inc: { stock: -quantity } },
+            { new: true }
+        );
+
+        res.status(200).json({ 
+            success: true, 
+            data: updatedProduct,
+            message: `Stock updated successfully. New stock: ${updatedProduct.stock}`
+        });
+
+    } catch (error) {
+        console.error("Error in Update Product Stock:", error.message);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};

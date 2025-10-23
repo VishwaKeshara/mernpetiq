@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   FaHome,
   FaUsers,
@@ -16,6 +16,7 @@ import {
 } from "react-icons/fa";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useSidebar } from "../context/SidebarContext";
 
 const links = [
   { name: "Dashboard", icon: <FaHome />, path: "/admin/dashboard" },
@@ -29,7 +30,7 @@ const links = [
 ];
 
 const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(true);
+  const { isOpen, toggleSidebar } = useSidebar();
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
@@ -41,28 +42,39 @@ const Sidebar = () => {
     <div className="flex">
    
       <div
-        className={`bg-amber-500 h-screen p-5 text-white relative duration-300 flex flex-col ${
-          isOpen ? "w-64" : "w-16"
+        className={`bg-amber-500 min-h-screen text-white fixed left-0 top-0 z-40 duration-300 flex flex-col shadow-lg ${
+          isOpen ? "w-64 p-5" : "w-16 p-2"
         }`}
       >
    
         <button
-          className="absolute top-4 right-[-12px] bg-amber-700 w-7 h-7 flex items-center justify-center rounded-full"
-          onClick={() => setIsOpen(!isOpen)}
+          className={`absolute top-4 bg-amber-700 hover:bg-amber-800 w-8 h-8 flex items-center justify-center rounded-full shadow-lg transition-all duration-200 hover:scale-110 ${
+            isOpen ? "right-[-12px]" : "right-[-16px]"
+          }`}
+          onClick={toggleSidebar}
         >
-          {isOpen ? <FaAngleLeft /> : <FaAngleRight />}
+          {isOpen ? <FaAngleLeft className="text-sm" /> : <FaAngleRight className="text-sm" />}
         </button>
 
    
-        <div className={`text-2xl font-bold mb-8 ${!isOpen && "text-center"}`}>
-          {isOpen ? "PetCare" : "PC"}
-        </div>
+        <NavLink 
+          to="/" 
+          className={`font-bold block hover:text-amber-200 transition-colors duration-200 cursor-pointer ${
+            isOpen ? "text-2xl mb-8" : "text-lg mb-6 text-center"
+          }`}
+        >
+          {isOpen ? "PetIQ" : "PQ"}
+        </NavLink>
 
         {/* User Profile Section */}
         {user && (
-          <div className={`mb-6 p-3 bg-amber-600 rounded-lg ${!isOpen && "flex justify-center"}`}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden">
+          <div className={`bg-amber-600 rounded-lg shadow-md ${
+            isOpen ? "mb-8 p-3" : "mb-6 p-2 flex justify-center"
+          }`}>
+            <div className={`flex items-center ${isOpen ? "gap-3" : ""}`}>
+              <div className={`bg-white rounded-full flex items-center justify-center overflow-hidden shadow-sm ${
+                isOpen ? "w-10 h-10" : "w-8 h-8"
+              }`}>
                 {user.avatarUrl ? (
                   <img 
                     src={`http://localhost:5000${user.avatarUrl}`} 
@@ -70,7 +82,7 @@ const Sidebar = () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <FaUser className="text-amber-600 text-lg" />
+                  <FaUser className={`text-amber-600 ${isOpen ? "text-lg" : "text-sm"}`} />
                 )}
               </div>
               {isOpen && (
@@ -84,33 +96,39 @@ const Sidebar = () => {
         )}
 
  
-        <ul className="flex-1">
+        <nav className="flex-1 space-y-1">
           {links.map((link, index) => (
             <NavLink
               key={index}
               to={link.path}
               className={({ isActive }) =>
-                `flex items-center gap-4 p-3 rounded-md my-2 transition-colors ${
+                `flex items-center rounded-lg transition-all duration-200 ${
+                  isOpen ? "gap-4 p-3" : "p-2 justify-center"
+                } ${
                   isActive 
-                    ? "bg-amber-600 text-white" 
-                    : "hover:bg-amber-600 hover:text-white text-amber-100"
+                    ? "bg-amber-600 text-white shadow-md transform scale-105" 
+                    : "hover:bg-amber-600 hover:text-white text-amber-100 hover:transform hover:scale-105"
                 }`
               }
+              title={!isOpen ? link.name : ""}
             >
-              <span className="text-xl">{link.icon}</span>
-              {isOpen && <span>{link.name}</span>}
+              <span className={`flex-shrink-0 ${isOpen ? "text-xl" : "text-lg"}`}>{link.icon}</span>
+              {isOpen && <span className="font-medium">{link.name}</span>}
             </NavLink>
           ))}
-        </ul>
+        </nav>
 
         {/* Logout Button */}
-        <div className="mt-auto">
+        <div className={`pt-4 border-t border-amber-400 ${isOpen ? "mt-8" : "mt-6"}`}>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-4 p-3 rounded-md hover:bg-red-500 w-full transition-colors text-amber-100 hover:text-white"
+            className={`flex items-center rounded-lg hover:bg-red-500 w-full transition-all duration-200 text-amber-100 hover:text-white hover:transform hover:scale-105 shadow-sm ${
+              isOpen ? "gap-4 p-3" : "p-2 justify-center"
+            }`}
+            title={!isOpen ? "Logout" : ""}
           >
-            <span className="text-xl"><FaSignOutAlt /></span>
-            {isOpen && <span>Logout</span>}
+            <span className={`flex-shrink-0 ${isOpen ? "text-xl" : "text-lg"}`}><FaSignOutAlt /></span>
+            {isOpen && <span className="font-medium">Logout</span>}
           </button>
         </div>
       </div>

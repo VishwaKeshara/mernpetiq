@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaBoxOpen, FaPlus, FaDollarSign, FaWarehouse } from "react-icons/fa";
+import { motion } from "framer-motion";
+import { FaBoxOpen, FaPlus, FaDollarSign, FaWarehouse, FaBell, FaExclamationTriangle } from "react-icons/fa";
+import { MdDelete } from "react-icons/md";
+import { FaPen } from "react-icons/fa";
 import { productBaseURL } from "../../axiosinstance.js";
 
 function ProductDashboard() {
@@ -13,10 +16,35 @@ function ProductDashboard() {
   });
   const [recentProducts, setRecentProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [allProducts, setAllProducts] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showActionModal, setShowActionModal] = useState(false);
 
   useEffect(() => {
     fetchProductData();
   }, []);
+
+  // Close notifications when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showNotifications && !event.target.closest('.notification-container')) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotifications]);
+
+  // Handle notification item click
+  const handleNotificationClick = (product) => {
+    setSelectedProduct(product);
+    setShowActionModal(true);
+    setShowNotifications(false);
+  };
 
   const fetchProductData = async () => {
     try {
@@ -25,6 +53,9 @@ function ProductDashboard() {
       
       if (data?.success && data?.data) {
         const products = data.data;
+        
+        // Store all products for notifications
+        setAllProducts(products);
         
         // Calculate statistics
         const totalProducts = products.length;
@@ -49,6 +80,32 @@ function ProductDashboard() {
       console.error("Error fetching product data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Calculate stock notifications
+  const stockNotifications = allProducts?.reduce((notifications, product) => {
+    if (product.stock === 0) {
+      notifications.outOfStock.push(product);
+    } else if (product.stock <= 10) {
+      notifications.lowStock.push(product);
+    }
+    return notifications;
+  }, { outOfStock: [], lowStock: [] }) || { outOfStock: [], lowStock: [] };
+
+  const totalNotifications = stockNotifications.outOfStock.length + stockNotifications.lowStock.length;
+
+  // Handle delete product
+  const handleDelete = async (id) => {
+    try {
+      const { data } = await productBaseURL.delete(`/${id}`);
+      if (data?.success) {
+        alert(data?.message || "Product deleted successfully");
+        fetchProductData(); // Refresh the data
+      }
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      alert("Failed to delete product. Please try again.");
     }
   };
 
@@ -105,7 +162,7 @@ function ProductDashboard() {
 
   return (
     <div
-      className="w-full min-h-screen bg-gradient-to-br from-gray-50 via-amber-50/30 to-gray-50 px-5 py-6"
+      className="w-full min-h-screen bg-gradient-to-br from-gray-50 via-amber-50/30 to-gray-50 px-5 py-6 flex flex-col justify-center"
       
       
       
@@ -131,18 +188,132 @@ function ProductDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate("/admin/products/add")}
-            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center gap-2 font-semibold"
+          {/* Notification Bell */}
+          <motion.div className="relative notification-container">
+            <motion.button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className={`px-4 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold relative ${
+                totalNotifications > 0 
+                  ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white' 
+                  : 'bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white'
+              }`}
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <FaBell className="text-lg" />
+              {totalNotifications > 0 && (
+                <span className="absolute -top-2 -right-2 bg-yellow-400 text-red-800 text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center border-2 border-white">
+                  {totalNotifications}
+                </span>
+              )}
+            </motion.button>
             
-            
-            
-            
-            
-          >
-            <FaPlus className="text-lg" />
-            Add New Product
-          </button>
+            {/* Notification Dropdown - Same as ProductList */}
+            {showNotifications && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                className="absolute right-0 top-full mt-2 w-122 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-[500px] overflow-y-auto"
+              >
+                <div className="p-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <FaBell className="text-red-500" />
+                    Stock Notifications
+                  </h3>
+                </div>
+                
+                <div className="p-4">
+                  {totalNotifications === 0 ? (
+                    <div className="text-center py-8">
+                      <FaBell className="mx-auto text-4xl text-gray-300 mb-3" />
+                      <p className="text-gray-500">No stock alerts at the moment</p>
+                      <p className="text-sm text-gray-400">All products are well stocked!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Out of Stock Items */}
+                      {stockNotifications.outOfStock.length > 0 && (
+                        <div>
+                          <h4 className="text-red-600 font-semibold mb-2 flex items-center gap-2">
+                            <FaExclamationTriangle />
+                            Out of Stock ({stockNotifications.outOfStock.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {stockNotifications.outOfStock.map((product) => (
+                              <div 
+                                key={product._id} 
+                                className="bg-red-50 border border-red-200 rounded-lg p-3 cursor-pointer hover:bg-red-100 transition-colors"
+                                onClick={() => handleNotificationClick(product)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <img 
+                                    src={product.image} 
+                                    alt={product.name}
+                                    className="w-10 h-10 rounded-lg object-cover"
+                                    onError={(e) => {
+                                      e.target.src = 'https://via.placeholder.com/40x40/FEF3C7/D97706?text=Pet';
+                                    }}
+                                  />
+                                  <div className="flex-1">
+                                    <p className="font-medium text-gray-800 text-sm">{product.name}</p>
+                                    <p className="text-xs text-red-600 font-semibold">Stock: {product.stock}</p>
+                                    <p className="text-xs text-gray-500 mt-1">Click to manage this product</p>
+                                  </div>
+                                  <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded-full">
+                                    URGENT
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Low Stock Items */}
+                      {stockNotifications.lowStock.length > 0 && (
+                        <div>
+                          <h4 className="text-yellow-600 font-semibold mb-2 flex items-center gap-2">
+                            <FaExclamationTriangle />
+                            Low Stock ({stockNotifications.lowStock.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {stockNotifications.lowStock.map((product) => (
+                              <div 
+                                key={product._id} 
+                                className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 cursor-pointer hover:bg-yellow-100 transition-colors"
+                                onClick={() => handleNotificationClick(product)}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <img 
+                                    src={product.image} 
+                                    alt={product.name}
+                                    className="w-10 h-10 rounded-lg object-cover"
+                                    onError={(e) => {
+                                      e.target.src = 'https://via.placeholder.com/40x40/FEF3C7/D97706?text=Pet';
+                                    }}
+                                  />
+                                  <div className="flex-1">
+                                    <p className="font-medium text-gray-800 text-sm">{product.name}</p>
+                                    <p className="text-xs text-yellow-600 font-semibold">Stock: {product.stock}</p>
+                                    <p className="text-xs text-gray-500 mt-1">Click to manage this product</p>
+                                  </div>
+                                  <span className="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded-full">
+                                    LOW
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+
           <button
             onClick={() => navigate("/admin/products/list")}
             className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-200 flex items-center gap-2 font-semibold"
@@ -274,6 +445,78 @@ function ProductDashboard() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Action Modal */}
+      {showActionModal && selectedProduct && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl relative z-50"
+          >
+            <div className="text-center">
+              <div className="mb-4">
+                <img 
+                  src={selectedProduct.image} 
+                  alt={selectedProduct.name}
+                  className="w-20 h-20 rounded-lg object-cover mx-auto border-2 border-gray-200"
+                  onError={(e) => {
+                    e.target.src = 'https://via.placeholder.com/80x80/FEF3C7/D97706?text=Pet';
+                  }}
+                />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">{selectedProduct.name}</h3>
+              <p className="text-gray-600 mb-4">
+                {selectedProduct.stock === 0 
+                  ? "This product is out of stock. What would you like to do?" 
+                  : "This product has low stock. What would you like to do?"
+                }
+              </p>
+              <div className="flex items-center justify-center gap-2 mb-6">
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                  selectedProduct.stock === 0 
+                    ? 'bg-red-100 text-red-800' 
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
+                  Stock: {selectedProduct.stock} units
+                </span>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    navigate(`/admin/products/add`, { state: selectedProduct });
+                    setShowActionModal(false);
+                  }}
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <FaPen size={14} />
+                  Update Stock
+                </button>
+                <button
+                  onClick={async () => {
+                    if (window.confirm('Are you sure you want to delete this product?')) {
+                      await handleDelete(selectedProduct._id);
+                      setShowActionModal(false);
+                    }
+                  }}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <MdDelete size={16} />
+                  Delete
+                </button>
+              </div>
+              
+              <button
+                onClick={() => setShowActionModal(false)}
+                className="mt-3 w-full bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
     </div>
